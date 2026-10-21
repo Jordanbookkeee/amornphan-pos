@@ -818,7 +818,15 @@ window.FIREBASE_CONFIG = {
 
   firebase.initializeApp(cfg);
   var auth = firebase.auth(), fs = firebase.firestore();
-  try { fs.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) { /* cache is optional */ }
+  // one tab keeps the offline copy; a second tab still syncs, just without it. Sharing the copy across
+  // tabs broke after a print window froze a tab ("failed to obtain primary lease"), so it stays per tab.
+  try { fs.enablePersistence().catch(function () {}); } catch (e) { /* cache is optional */ }
+  // a frozen page (print window, sleeping tablet) can leave the live connection stale: restart it on return
+  function refresh() { fs.disableNetwork().then(function () { return fs.enableNetwork(); }).catch(function () {}); }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') refresh(); });
+  window.addEventListener('focus', refresh);
+  window.addEventListener('online', refresh);
+  window.addEventListener('afterprint', refresh);
   var inc = firebase.firestore.FieldValue.increment;
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
