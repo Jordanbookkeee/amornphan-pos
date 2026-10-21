@@ -2,6 +2,11 @@
 
 เว็บระบบขายหน้าร้าน สร้างจากระบบดีไซน์ "Amornphan POS" ใช้งานได้ทันที ไม่ต้องติดตั้งอะไร
 
+## เว็บออนไลน์
+https://jordanbookkeee.github.io/amornphan-pos/ (GitHub Pages จาก repo `Jordanbookkeee/amornphan-pos`)
+
+อัปเดตเว็บ: แก้ไฟล์ในโฟลเดอร์นี้ → สร้าง `dist/index.html` ใหม่ (ไฟล์เดียวที่รวมทุกอย่าง) → อัปโหลดทับใน repo
+
 ## วิธีเปิด
 ดับเบิลคลิก `index.html` (แนะนำ Chrome หรือ Edge) ใช้แบบออฟไลน์ได้ ข้อมูลทั้งหมดเก็บในเบราว์เซอร์ของเครื่องนั้น
 

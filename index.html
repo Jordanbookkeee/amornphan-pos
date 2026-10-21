@@ -1404,7 +1404,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       imported: 'นำเข้าข้อมูลแล้ว', importBad: 'ไฟล์ไม่ถูกต้อง', settingsSaved: 'บันทึกการตั้งค่าแล้ว',
       pinReason: '{x}', offlineNote: 'ออฟไลน์ ขายต่อได้ตามปกติ', drawerOpen: 'เปิดลิ้นชักแล้ว', methodCash: 'เงินสด', methodPP: 'พร้อมเพย์', methodTr: 'โอนเงิน',
       shopStationery: 'เครื่องเขียน', shopParcel: 'ร้านพัสดุ', searchParcel: 'สแกน หรือพิมพ์ขนาดกล่อง เช่น B, C+8', emptyParcel: 'แตะขนาดกล่อง หรือสแกนบาร์โค้ด',
-      boxCode: 'รหัสขนาด (เช่น B, C+8)', boxDims: 'ขนาด (ไทย)', boxDimsEn: 'ขนาด (อังกฤษ)', switched: 'สลับไป{x}แล้ว'
+      boxCode: 'รหัสขนาด (เช่น B, C+8)', boxDims: 'ขนาด (ไทย)', boxDimsEn: 'ขนาด (อังกฤษ)', switched: 'สลับไป{x}แล้ว',
+      goLive: 'เริ่มใช้งานจริง', goLiveHint: 'ลบบิล ยอดขาย และประวัติสต็อกตัวอย่างของทั้งสองร้าน เก็บรายการสินค้าไว้ให้แก้ราคาและสต็อกต่อ',
+      goLiveQ: 'เริ่มใช้งานจริง?', goLiveBody: 'บิลและยอดขายทั้งหมดของทั้งสองร้านจะถูกลบ เลขบิลเริ่มที่ A-0001 และ P-0001 สินค้าและการตั้งค่ายังอยู่ ควรดาวน์โหลดไฟล์สำรองก่อน',
+      goLiveBtn: 'ลบยอดตัวอย่าง', goLiveDone: 'พร้อมใช้งานจริงแล้ว เลขบิลเริ่มใหม่'
     },
     en: {
       cart: 'Cart', billLabel: 'Bill', lines: 'lines', pcs: 'pcs', recall: 'Recall', heldBills: 'Held bills', heldEmpty: 'No held bills',
@@ -1462,7 +1465,10 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       imported: 'Data imported', importBad: 'That file is not a valid backup', settingsSaved: 'Settings saved',
       pinReason: '{x}', offlineNote: 'Offline, selling continues as normal', drawerOpen: 'Drawer opened', methodCash: 'Cash', methodPP: 'PromptPay', methodTr: 'Transfer',
       shopStationery: 'Stationery', shopParcel: 'Parcel shop', searchParcel: 'Scan, or type a box size such as B or C+8', emptyParcel: 'Tap a box size or scan a barcode',
-      boxCode: 'Size code (e.g. B, C+8)', boxDims: 'Size (Thai)', boxDimsEn: 'Size (English)', switched: 'Switched to {x}'
+      boxCode: 'Size code (e.g. B, C+8)', boxDims: 'Size (Thai)', boxDimsEn: 'Size (English)', switched: 'Switched to {x}',
+      goLive: 'Start real use', goLiveHint: 'Removes the sample bills, sales and stock history of both shops; keeps the product list so you can fix prices and stock',
+      goLiveQ: 'Start real use?', goLiveBody: 'All bills and sales in both shops are removed. Bills restart at A-0001 and P-0001. Products and settings stay. Download a backup first.',
+      goLiveBtn: 'Remove sample sales', goLiveDone: 'Ready for real use; bill numbers restarted'
     }
   };
 
@@ -2417,6 +2423,11 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
           } }, tx('addCat'))));
     } else {
       body = h(Frag, null,
+        h('div', { className: 'set-row', style: { flexWrap: 'wrap', borderBottom: 0, paddingTop: 0 } },
+          h('div', { className: 'grow' }, h('span', { className: 'set-t' }, tx('goLive')), h('span', { className: 'ap-cap' }, tx('goLiveHint'))),
+          h(A.Button, { variant: 'primary', icon: 'check', onClick: function () {
+            p.confirm({ title: tx('goLiveQ'), body: tx('goLiveBody'), tone: 'warn', ok: tx('goLiveBtn'), pin: true, onOk: function () { p.startFresh(); p.toast(tx('goLiveDone'), 'success', false); } });
+          } }, tx('goLive'))),
         h(A.Alert, { tone: 'info', icon: 'info' }, tx('backupHint')),
         h('div', { className: 'row-c', style: { paddingTop: 16, flexWrap: 'wrap' } },
           h(A.Button, { variant: 'primary', icon: 'upload', onClick: function () { download('amornphan-backup-' + new Date().toLocaleDateString('en-CA') + '.json', JSON.stringify(load(DB_KEY)), 'application/json'); } }, tx('exportData')),
@@ -2744,7 +2755,16 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       else if (view === 'stock') page = h(StockView, Object.assign({ key: stockInit || 'stock' }, common, { initialTab: stockInit ? 'receive' : null, initialPid: stockInit }));
       else if (view === 'reports') page = h(ReportsView, Object.assign({}, common, { printSummary: printSummary }));
       else if (view === 'bills') page = h(BillsView, common);
-      else if (view === 'settings') page = h(SettingsView, Object.assign({}, common, { setLang: setLang, replaceDb: function (d) { setDb(d); setCarts({ stationery: emptyCart(), parcel: emptyCart() }); } }));
+      else if (view === 'settings') page = h(SettingsView, Object.assign({}, common, { setLang: setLang, replaceDb: function (d) { setDb(d); setCarts({ stationery: emptyCart(), parcel: emptyCart() }); },
+        // keep products and settings, drop every sample sale so both shops start at bill 0001
+        startFresh: function () {
+          setFull(function (f) {
+            var n = clone(f);
+            Object.keys(n.shops).forEach(function (k) { var s = n.shops[k]; s.bills = []; s.moves = []; s.closes = []; s.held = []; s.nextBill = 1; });
+            return n;
+          });
+          setCarts({ stationery: emptyCart(), parcel: emptyCart() });
+        } }));
       else page = h(SellView, Object.assign({}, common, { cart: cart, query: query, setQuery: setQuery, cat: cat, setCat: setCat, selected: selected, setSelected: setSelected, flashKey: flashKey, sheet: sheet, setSheet: setSheet,
         addProduct: addProduct, setQty: setQty, setUnit: setUnit, removeLine: removeLine, clearCart: clearCart, keyLine: keyLine, hold: hold, openRecall: openRecall, openDiscount: openDiscount, openCustom: openCustom, goPay: goPay, simulateScan: simulateScan }));
       main = h(Frag, null,
