@@ -420,6 +420,10 @@ a { color: var(--brand); }
 @keyframes slide { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 .offline-bar { flex: none; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-1) var(--space-4); background: var(--brand-soft); color: var(--ink); font-size: 14px; font-weight: 600; }
 
+/* sign-in and loading */
+.gate { align-items: center; justify-content: center; padding: var(--space-4); overflow: auto; }
+.gate-box { width: 420px; max-width: 100%; padding: var(--space-6) var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-raised); }
+
 /* receipt preview */
 .rc-preview { background: var(--surface-sunken); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; align-items: center; gap: var(--space-3); overflow: auto; }
 .no-logo .ap-receipt-logo { display: none; }
@@ -775,6 +779,188 @@ rendererPackageName:"react-dom"});Q.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE
 c,!1,d,e);a[Ja]=b.current;sc(8===a.nodeType?a.parentNode:a);return new Xf(b)};Q.findDOMNode=function(a){if(null==a)return null;if(1===a.nodeType)return a;var b=a._reactInternals;if(void 0===b){if("function"===typeof a.render)throw Error(m(188));a=Object.keys(a).join(",");throw Error(m(268,a));}a=Bg(b);a=null===a?null:a.stateNode;return a};Q.flushSync=function(a){return yb(a)};Q.hydrate=function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!0,c)};Q.hydrateRoot=function(a,b,c){if(!Yf(a))throw Error(m(405));
 var d=null!=c&&c.hydratedSources||null,e=!1,f="",g=aj;null!==c&&void 0!==c&&(!0===c.unstable_strictMode&&(e=!0),void 0!==c.identifierPrefix&&(f=c.identifierPrefix),void 0!==c.onRecoverableError&&(g=c.onRecoverableError));b=Wi(b,null,a,1,null!=c?c:null,e,!1,f,g);a[Ja]=b.current;sc(a);if(d)for(a=0;a<d.length;a++)c=d[a],e=c._getVersion,e=e(c._source),null==b.mutableSourceEagerHydrationData?b.mutableSourceEagerHydrationData=[c,e]:b.mutableSourceEagerHydrationData.push(c,e);return new Ud(b)};Q.render=
 function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmountComponentAtNode=function(a){if(!Vd(a))throw Error(m(40));return a._reactRootContainer?(yb(function(){Wd(null,null,a,!1,function(){a._reactRootContainer=null;a[Ja]=null})}),!0):!1};Q.unstable_batchedUpdates=Tf;Q.unstable_renderSubtreeIntoContainer=function(a,b,c,d){if(!Vd(c))throw Error(m(200));if(null==a||void 0===a._reactInternals)throw Error(m(38));return Wd(a,b,c,!1,d)};Q.version="18.3.1-next-f1338f8080-20240426"});
+})();
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+/* Firebase web settings for the shop's project (from Firebase console › Project settings › Your apps).
+   These identify the project; they are not secret. Access is protected by sign-in and the Firestore rules
+   (only the shop account may read or write). Set FIREBASE_CONFIG to null to run local-only. */
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAW-B467YZ-moSFowCoSQ3ibxaWBguK_Wc",
+  authDomain: "amornphan-pos.firebaseapp.com",
+  projectId: "amornphan-pos",
+  storageBucket: "amornphan-pos.firebasestorage.app",
+  messagingSenderId: "710357569856",
+  appId: "1:710357569856:web:439e1c9d2ac9a453a0aaa5"
+};
+
+</script>
+<script>
+/* Amornphan POS — cloud sync through Firebase (Firestore + email sign-in).
+   Without window.FIREBASE_CONFIG the app stays local-only (data in this browser).
+   Layout:  config/main                 settings, users
+            shops/{shop}                prefix, cats, held, nextBill
+            shops/{shop}/products/{id}  one product (stock changes are sent as increments)
+            shops/{shop}/bills/{id}     one bill
+            shops/{shop}/moves/{id}     one stock movement
+            shops/{shop}/closes/{id}    one close-of-day record */
+(function () {
+  var cfg = window.FIREBASE_CONFIG;
+  var SHOPS = ['stationery', 'parcel'];
+  var BILL_DAYS = 120;
+  var api = { enabled: !!(cfg && cfg.apiKey && window.firebase) };
+  window.POSCloud = api;
+  if (!api.enabled) return;
+
+  firebase.initializeApp(cfg);
+  var auth = firebase.auth(), fs = firebase.firestore();
+  try { fs.enablePersistence({ synchronizeTabs: true }).catch(function () {}); } catch (e) { /* cache is optional */ }
+  var inc = firebase.firestore.FieldValue.increment;
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+  function clean(o) { return JSON.parse(JSON.stringify(o)); } // Firestore rejects undefined
+  function billId(b) { return b.id || b.no; }
+
+  api.onAuth = function (cb) { return auth.onAuthStateChanged(cb); };
+  api.signIn = function (email, pw) { return auth.signInWithEmailAndPassword(email, pw); };
+  api.signOut = function () { return auth.signOut(); };
+  api.user = function () { return auth.currentUser; };
+
+  /* ---------- reading: keep one cache per collection and rebuild the whole db on every change ---------- */
+  api.subscribe = function (onData, onStatus, onError) {
+    var cache = { config: undefined, shops: {} }, unsubs = [], pending = {};
+    SHOPS.forEach(function (s) { cache.shops[s] = { meta: undefined, products: {}, bills: {}, moves: {}, closes: {} }; });
+
+    function status(key, snap) {
+      pending[key] = snap.metadata.hasPendingWrites;
+      var n = 0; for (var k in pending) if (pending[k]) n++;
+      onStatus(n > 0 ? 'pending' : snap.metadata.fromCache ? 'cache' : 'ok');
+    }
+    function emit() {
+      if (cache.config === undefined) return;
+      if (cache.config === null) { onData(null); return; } // nothing in the cloud yet
+      for (var i = 0; i < SHOPS.length; i++) if (cache.shops[SHOPS[i]].meta === undefined) return;
+      var out = { version: 2, settings: cache.config.settings, users: cache.config.users, shops: {} };
+      SHOPS.forEach(function (s) {
+        var c = cache.shops[s], m = c.meta || {};
+        function vals(o) { return Object.keys(o).map(function (k) { return o[k]; }); }
+        var products = vals(c.products).sort(function (a, b) { return (a.ord || 0) - (b.ord || 0); });
+        var bills = vals(c.bills).sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+        var maxNo = 0; bills.forEach(function (b) { var n = parseInt(String(b.no).split('-')[1], 10); if (n > maxNo) maxNo = n; });
+        out.shops[s] = {
+          prefix: m.prefix || (s === 'parcel' ? 'P' : 'A'), cats: m.cats || [], held: m.held || [],
+          nextBill: Math.max(m.nextBill || 1, maxNo + 1), products: products, bills: bills,
+          moves: vals(c.moves).sort(function (a, b) { return a.date < b.date ? -1 : 1; }),
+          closes: vals(c.closes).sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+        };
+      });
+      onData(out);
+    }
+    function listen(key, ref, apply) {
+      unsubs.push(ref.onSnapshot({ includeMetadataChanges: true }, function (snap) { apply(snap); status(key, snap); emit(); }, onError));
+    }
+    function coll(key, ref, target) {
+      listen(key, ref, function (snap) {
+        snap.docChanges().forEach(function (ch) {
+          if (ch.type === 'removed') delete target[ch.doc.id];
+          else target[ch.doc.id] = ch.doc.data();
+        });
+      });
+    }
+
+    listen('config', fs.doc('config/main'), function (snap) { cache.config = snap.exists ? snap.data() : null; });
+    var since = new Date(Date.now() - BILL_DAYS * 864e5).toISOString();
+    SHOPS.forEach(function (s) {
+      var c = cache.shops[s], base = fs.collection('shops').doc(s);
+      listen('meta-' + s, base, function (snap) { c.meta = snap.exists ? snap.data() : null; });
+      coll('products-' + s, base.collection('products'), c.products);
+      coll('bills-' + s, base.collection('bills').where('date', '>=', since), c.bills);
+      coll('moves-' + s, base.collection('moves').orderBy('date', 'desc').limit(400), c.moves);
+      coll('closes-' + s, base.collection('closes').orderBy('date', 'desc').limit(120), c.closes);
+    });
+    return function () { unsubs.forEach(function (u) { u(); }); };
+  };
+
+  /* ---------- writing: send only what changed between two versions of the db ---------- */
+  function Writer() { this.ops = []; }
+  Writer.prototype.set = function (ref, data, merge) { this.ops.push(['set', ref, clean(data), merge]); };
+  Writer.prototype.update = function (ref, data) { this.ops.push(['update', ref, data]); };
+  Writer.prototype.del = function (ref) { this.ops.push(['delete', ref]); };
+  Writer.prototype.commit = function () {
+    var chunks = [], ops = this.ops;
+    for (var i = 0; i < ops.length; i += 450) chunks.push(ops.slice(i, i + 450));
+    return Promise.all(chunks.map(function (part) {
+      var b = fs.batch();
+      part.forEach(function (o) {
+        if (o[0] === 'set') b.set(o[1], o[2], o[3] ? { merge: true } : {});
+        else if (o[0] === 'update') b.update(o[1], o[2]);
+        else b.delete(o[1]);
+      });
+      return b.commit();
+    }));
+  };
+
+  function byKey(list, key) { var m = {}; (list || []).forEach(function (x) { m[key(x)] = x; }); return m; }
+
+  function diffShop(w, s, a, b) {
+    var base = fs.collection('shops').doc(s);
+    var metaA = a ? { prefix: a.prefix, cats: a.cats, held: a.held, nextBill: a.nextBill } : null;
+    var metaB = { prefix: b.prefix, cats: b.cats, held: b.held, nextBill: b.nextBill };
+    if (!same(metaA, metaB)) w.set(base, metaB);
+
+    var pa = byKey(a && a.products, function (p) { return p.id; }), pb = byKey(b.products, function (p) { return p.id; });
+    Object.keys(pb).forEach(function (id, i) {
+      var nb = pb[id], na = pa[id], ref = base.collection('products').doc(id);
+      // a product added in the app goes to the top of the list, like it does locally
+      if (!na) { w.set(ref, Object.assign({ ord: nb.ord != null ? nb.ord : (a ? -Math.round(Date.now() / 1000) : i) }, nb)); return; }
+      if (same(na, nb)) return;
+      var restA = Object.assign({}, na), restB = Object.assign({}, nb);
+      delete restA.stock; delete restB.stock;
+      if (!same(restA, restB)) w.set(ref, restB, true);
+      if (na.stock !== nb.stock) {
+        // two devices selling the same item while apart must both count, so stock moves by a delta
+        if (typeof na.stock === 'number' && typeof nb.stock === 'number') w.update(ref, { stock: inc(nb.stock - na.stock) });
+        else w.set(ref, { stock: nb.stock == null ? null : nb.stock }, true);
+      }
+    });
+    Object.keys(pa).forEach(function (id) { if (!pb[id]) w.del(base.collection('products').doc(id)); });
+
+    [['bills', billId], ['moves', function (m) { return m.id; }], ['closes', function (c) { return c.id; }]].forEach(function (spec) {
+      var name = spec[0], key = spec[1];
+      var ma = byKey(a && a[name], key), mb = byKey(b[name], key);
+      Object.keys(mb).forEach(function (k) { if (!ma[k] || !same(ma[k], mb[k])) w.set(base.collection(name).doc(k), mb[k]); });
+      Object.keys(ma).forEach(function (k) { if (!mb[k]) w.del(base.collection(name).doc(k)); });
+    });
+  }
+
+  api.push = function (prev, next) {
+    var w = new Writer();
+    if (!prev || !same({ s: prev.settings, u: prev.users }, { s: next.settings, u: next.users })) w.set(fs.doc('config/main'), { version: 2, settings: next.settings, users: next.users });
+    SHOPS.forEach(function (s) { if (next.shops[s]) diffShop(w, s, prev && prev.shops[s], next.shops[s]); });
+    if (!w.ops.length) return Promise.resolve();
+    return w.commit();
+  };
+
+  // first device to sign in: give every record an id and send the whole db up
+  api.prepare = function (full) {
+    var d = clean(full);
+    SHOPS.forEach(function (s) {
+      var sh = d.shops[s]; if (!sh) return;
+      sh.products.forEach(function (p, i) { if (p.ord == null) p.ord = i; });
+      sh.moves.forEach(function (m) { if (!m.id) m.id = uid(); });
+      (sh.closes || []).forEach(function (c) { if (!c.id) c.id = uid(); });
+      var since = new Date(Date.now() - BILL_DAYS * 864e5).toISOString();
+      sh.bills = sh.bills.filter(function (b) { return b.date >= since; });
+      sh.moves = sh.moves.slice(-400);
+    });
+    return d;
+  };
+  api.upload = function (full) { return api.push(null, full); };
 })();
 
 </script>
@@ -1407,7 +1593,12 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       boxCode: 'รหัสขนาด (เช่น B, C+8)', boxDims: 'ขนาด (ไทย)', boxDimsEn: 'ขนาด (อังกฤษ)', switched: 'สลับไป{x}แล้ว',
       goLive: 'เริ่มใช้งานจริง', goLiveHint: 'ลบบิล ยอดขาย และประวัติสต็อกตัวอย่างของทั้งสองร้าน เก็บรายการสินค้าไว้ให้แก้ราคาและสต็อกต่อ',
       goLiveQ: 'เริ่มใช้งานจริง?', goLiveBody: 'บิลและยอดขายทั้งหมดของทั้งสองร้านจะถูกลบ เลขบิลเริ่มที่ A-0001 และ P-0001 สินค้าและการตั้งค่ายังอยู่ ควรดาวน์โหลดไฟล์สำรองก่อน',
-      goLiveBtn: 'ลบยอดตัวอย่าง', goLiveDone: 'พร้อมใช้งานจริงแล้ว เลขบิลเริ่มใหม่'
+      goLiveBtn: 'ลบยอดตัวอย่าง', goLiveDone: 'พร้อมใช้งานจริงแล้ว เลขบิลเริ่มใหม่',
+      account: 'บัญชีร้าน', accountHint: 'เข้าสู่ระบบด้วย {x} · ข้อมูลซิงก์ทุกเครื่องที่ใช้บัญชีนี้', signOut: 'ออกจากระบบ',
+      checkingLogin: 'กำลังตรวจสอบการเข้าสู่ระบบ…', loadingData: 'กำลังโหลดข้อมูลร้าน…',
+      loginTitle: 'เข้าสู่ระบบร้าน', loginHint: 'ใช้อีเมลและรหัสผ่านของร้าน ทุกเครื่องที่เข้าระบบจะเห็นข้อมูลเดียวกัน',
+      loginEmail: 'อีเมล', loginPassword: 'รหัสผ่าน', loginBtn: 'เข้าสู่ระบบ', loginBusy: 'กำลังเข้าสู่ระบบ…',
+      loginWrong: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง ลองอีกครั้ง', loginOffline: 'ยังไม่มีอินเทอร์เน็ต ต้องต่อเน็ตครั้งแรกเพื่อเข้าสู่ระบบ'
     },
     en: {
       cart: 'Cart', billLabel: 'Bill', lines: 'lines', pcs: 'pcs', recall: 'Recall', heldBills: 'Held bills', heldEmpty: 'No held bills',
@@ -1468,7 +1659,12 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       boxCode: 'Size code (e.g. B, C+8)', boxDims: 'Size (Thai)', boxDimsEn: 'Size (English)', switched: 'Switched to {x}',
       goLive: 'Start real use', goLiveHint: 'Removes the sample bills, sales and stock history of both shops; keeps the product list so you can fix prices and stock',
       goLiveQ: 'Start real use?', goLiveBody: 'All bills and sales in both shops are removed. Bills restart at A-0001 and P-0001. Products and settings stay. Download a backup first.',
-      goLiveBtn: 'Remove sample sales', goLiveDone: 'Ready for real use; bill numbers restarted'
+      goLiveBtn: 'Remove sample sales', goLiveDone: 'Ready for real use; bill numbers restarted',
+      account: 'Shop account', accountHint: 'Signed in as {x} · data syncs to every device using this account', signOut: 'Sign out',
+      checkingLogin: 'Checking sign-in…', loadingData: 'Loading shop data…',
+      loginTitle: 'Sign in to the shop', loginHint: 'Use the shop email and password. Every signed-in device sees the same data.',
+      loginEmail: 'Email', loginPassword: 'Password', loginBtn: 'Sign in', loginBusy: 'Signing in…',
+      loginWrong: 'Wrong email or password, try again', loginOffline: 'No internet yet; the first sign-in needs a connection'
     }
   };
 
@@ -1994,7 +2190,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
           var qn = num(l.qty), c = num(l.cost), old = Math.max(0, pr.stock);
           pr.cost = old + qn > 0 ? round2((old * pr.cost + qn * c) / (old + qn)) : c;
           pr.stock = pr.stock + qn;
-          n.moves.push({ date: now, pid: pr.id, qty: qn, type: 'receive', note: { th: note, en: note } });
+          n.moves.push({ id: uid(), date: now, pid: pr.id, qty: qn, type: 'receive', note: { th: note, en: note } });
         });
       });
       p.toast(fill(tx('recvSaved'), { x: lines.length }));
@@ -2006,7 +2202,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       var reasonTh = D.strings.th[adj.reason], reasonEn = D.strings.en[adj.reason];
       p.commit(function (n) {
         var x = findProduct(n, pr.id); x.stock = Math.max(0, x.stock + d);
-        n.moves.push({ date: new Date().toISOString(), pid: pr.id, qty: d, type: 'adjust', note: { th: reasonTh, en: reasonEn } });
+        n.moves.push({ id: uid(), date: new Date().toISOString(), pid: pr.id, qty: d, type: 'adjust', note: { th: reasonTh, en: reasonEn } });
       });
       p.toast(fill(tx('adjSaved'), { x: pr.name[lang] }));
       setAdj({ pid: adj.pid, qty: '', reason: adj.reason });
@@ -2195,7 +2391,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     var diff = cnt == null ? null : round2(cnt - expected);
     var lastClose = db.closes.filter(function (c) { return sameDay(new Date(c.date), now); }).slice(-1)[0];
     function doClose() {
-      var rec = { date: new Date().toISOString(), sales: round2(by.cash + by.promptpay + by.transfer), cash: by.cash, promptpay: by.promptpay, transfer: by.transfer, float: s.float, refunds: refundsCash, expected: expected, counted: cnt, diff: diff, reason: reason, bills: okToday.length };
+      var rec = { id: uid(), date: new Date().toISOString(), sales: round2(by.cash + by.promptpay + by.transfer), cash: by.cash, promptpay: by.promptpay, transfer: by.transfer, float: s.float, refunds: refundsCash, expected: expected, counted: cnt, diff: diff, reason: reason, bills: okToday.length };
       p.commit(function (n) { n.closes.push(rec); });
       p.toast(fill(tx('closed'), { x: hhmm(rec.date) }));
       p.printSummary(rec);
@@ -2301,7 +2497,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
             x.status = kind === 'void' ? 'void' : 'refund'; if (kind !== 'void') x.refundDate = new Date().toISOString();
             x.lines.forEach(function (l) {
               var pr = l.pid ? findProduct(n, l.pid) : null;
-              if (pr && pr.stock != null) { pr.stock += l.qty * (l.factor || 1); n.moves.push({ date: new Date().toISOString(), pid: pr.id, qty: l.qty * (l.factor || 1), type: kind === 'void' ? 'void' : 'return', note: { th: '#' + bill.no, en: '#' + bill.no } }); }
+              if (pr && pr.stock != null) { pr.stock += l.qty * (l.factor || 1); n.moves.push({ id: uid(), date: new Date().toISOString(), pid: pr.id, qty: l.qty * (l.factor || 1), type: kind === 'void' ? 'void' : 'return', note: { th: '#' + bill.no, en: '#' + bill.no } }); }
             });
           });
           p.toast(fill(tx(kind === 'void' ? 'billVoided' : 'billRefunded'), { x: bill.no }), 'warn', false);
@@ -2392,6 +2588,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         h('div', { className: 'full', style: { paddingTop: 12 } }, h(A.Logo, { height: 28 })));
     } else if (sec === 'users') {
       body = h(Frag, null,
+        p.cloudUser ? row(tx('account'), fill(tx('accountHint'), { x: p.cloudUser }), h(A.Button, { variant: 'secondary', icon: 'user', onClick: p.signOut }, tx('signOut'))) : null,
         row(tx('cashierNow'), null, h(Seg, { style: { width: 280 }, value: s.cashier, onChange: function (v) { setS('cashier', v); }, options: db.users.map(function (u) { return [u.id, u[lang]]; }) })),
         h('div', { className: 'set-row', style: { flexWrap: 'wrap' } },
           h('div', { className: 'grow' }, h('span', { className: 'set-t' }, tx('changePin'))),
@@ -2430,7 +2627,7 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
           } }, tx('goLive'))),
         h(A.Alert, { tone: 'info', icon: 'info' }, tx('backupHint')),
         h('div', { className: 'row-c', style: { paddingTop: 16, flexWrap: 'wrap' } },
-          h(A.Button, { variant: 'primary', icon: 'upload', onClick: function () { download('amornphan-backup-' + new Date().toLocaleDateString('en-CA') + '.json', JSON.stringify(load(DB_KEY)), 'application/json'); } }, tx('exportData')),
+          h(A.Button, { variant: 'primary', icon: 'upload', onClick: function () { download('amornphan-backup-' + new Date().toLocaleDateString('en-CA') + '.json', JSON.stringify(p.exportFull()), 'application/json'); } }, tx('exportData')),
           h('label', { className: 'ap-btn ap-btn-secondary' }, h(A.Icon, { name: 'copy', size: 22 }), h('span', null, tx('importData')),
             h('input', { type: 'file', accept: 'application/json,.json', style: { display: 'none' }, onChange: function (e) {
               var file = e.target.files[0]; e.target.value = ''; if (!file) return;
@@ -2462,20 +2659,33 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
      APP
      ====================================================================== */
   function App() {
+    var C = window.POSCloud || {}, cloudOn = !!C.enabled;
     var _db = useState(function () { return D.migrate(load(DB_KEY)) || D.seed(); }), full = _db[0], setFull = _db[1];
-    var shop = full.shop === 'parcel' ? 'parcel' : 'stationery';
+    var ui0 = load(UI_KEY) || {};
+    var _shop = useState(ui0.shop || full.shop || 'stationery'), shop = _shop[0] === 'parcel' ? 'parcel' : 'stationery', setShop = _shop[1];
+    // cloud: undefined while Firebase checks the sign-in, null when signed out
+    var _user = useState(cloudOn ? undefined : null), user = _user[0], setUser = _user[1];
+    var _ready = useState(!cloudOn), ready = _ready[0], setReady = _ready[1];
+    var _sync = useState('ok'), syncState = _sync[0], setSync = _sync[1];
+    var fullRef = useRef(full), uploadedRef = useRef(false);
+    fullRef.current = full;
     // each screen sees one shop's products, bills and stock plus the shared settings
     var db = useMemo(function () { return Object.assign({}, full.shops[shop], { settings: full.settings, users: full.users, shop: shop }); }, [full, shop]);
-    var ui0 = load(UI_KEY) || {};
     var _lang = useState(ui0.lang || 'th'), lang = _lang[0], setLang = _lang[1];
     var _view = useState('sell'), view = _view[0], setView = _view[1];
     var _carts = useState(function () { var c = ui0.carts || {}; return { stationery: c.stationery && c.stationery.lines ? c.stationery : emptyCart(), parcel: c.parcel && c.parcel.lines ? c.parcel : emptyCart() }; }), carts = _carts[0], setCarts = _carts[1];
     var cart = carts[shop];
     function setCart(v) { var s = shop; setCarts(function (cs) { var o = {}; o[s] = typeof v === 'function' ? v(cs[s]) : v; return Object.assign({}, cs, o); }); }
-    function setDb(d) { setFull(D.migrate(d) || d); }
+    // every data change goes through here: show it at once, then send the difference to the cloud
+    function change(next) {
+      var prev = fullRef.current;
+      fullRef.current = next; setFull(next);
+      if (cloudOn && user) C.push(prev, next).catch(function (e) { toast((lang === 'en' ? 'Sync failed: ' : 'ซิงก์ไม่สำเร็จ: ') + e.message, 'danger', false); });
+    }
+    function setDb(d) { change(D.migrate(d) || d); }
     function switchShop(id) {
       if (id === shop || view === 'pay') return;
-      setFull(function (f) { return Object.assign({}, f, { shop: id }); });
+      setShop(id);
       setQuery(''); setCat(id === 'parcel' ? 'all' : 'hot'); setSelected(null); setDone(null); setStockInit(null);
       if (view === 'done') setView('sell');
     }
@@ -2498,8 +2708,24 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     var S = D.strings[lang];
     var tx = useCallback(function (k, v) { var s = S[k] != null ? S[k] : k; return v ? fill(s, v) : s; }, [lang]);
 
-    useEffect(function () { if (!store(DB_KEY, full)) toast(lang === 'en' ? 'Storage is full — download a backup in Settings' : 'พื้นที่เก็บข้อมูลเต็ม ควรดาวน์โหลดไฟล์สำรองในตั้งค่า', 'danger', false); }, [full]);
-    useEffect(function () { store(UI_KEY, { lang: lang, carts: carts }); }, [lang, carts]);
+    useEffect(function () { if (!cloudOn && !store(DB_KEY, full)) toast(lang === 'en' ? 'Storage is full — download a backup in Settings' : 'พื้นที่เก็บข้อมูลเต็ม ควรดาวน์โหลดไฟล์สำรองในตั้งค่า', 'danger', false); }, [full]);
+    useEffect(function () { store(UI_KEY, { lang: lang, carts: carts, shop: shop }); }, [lang, carts, shop]);
+    useEffect(function () { if (cloudOn) return C.onAuth(function (u) { setUser(u || null); if (!u) setReady(false); }); }, []);
+    useEffect(function () {
+      if (!cloudOn || !user) return;
+      return C.subscribe(function (data) {
+        if (data === null) {
+          // the cloud is empty: this device's data becomes the shop's data
+          if (uploadedRef.current) return;
+          uploadedRef.current = true;
+          var first = C.prepare(fullRef.current);
+          fullRef.current = first; setFull(first); setReady(true);
+          C.upload(first).then(function () { toast(lang === 'en' ? 'This device’s data is now in the cloud' : 'ส่งข้อมูลจากเครื่องนี้ขึ้นระบบแล้ว'); });
+          return;
+        }
+        fullRef.current = data; setFull(data); setReady(true);
+      }, setSync, function (e) { toast((lang === 'en' ? 'Cannot read shop data: ' : 'อ่านข้อมูลร้านไม่ได้: ') + e.message, 'danger', false); });
+    }, [user]);
     var theme = shop === 'parcel' ? (db.settings.theme === 'dark' ? 'parcel-dark' : 'parcel') : db.settings.theme;
     useEffect(function () { document.documentElement.setAttribute('data-theme', theme); document.documentElement.lang = lang; }, [theme, lang]);
     useEffect(function () {
@@ -2510,15 +2736,12 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
 
     // fn edits one shop's data (products, bills, stock…) and the shared settings through a single object
     function commit(fn) {
-      var s = shop;
-      setFull(function (prev) {
-        var n = clone(prev), part = n.shops[s];
-        part.settings = n.settings; part.users = n.users;
-        fn(part);
-        n.settings = part.settings; n.users = part.users;
-        delete part.settings; delete part.users; delete part.shop;
-        return n;
-      });
+      var n = clone(fullRef.current), part = n.shops[shop];
+      part.settings = n.settings; part.users = n.users;
+      fn(part);
+      n.settings = part.settings; n.users = part.users;
+      delete part.settings; delete part.users; delete part.shop;
+      change(n);
     }
     function toast(message, tone, undo) {
       var id = uid();
@@ -2618,12 +2841,12 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         var pr = findProduct(d, l.pid), u = pr.units[l.unit];
         return { pid: pr.id, name: pr.name, unit: l.unit, unitName: { th: u.th, en: u.en }, factor: u.factor, price: u.price, cost: round2(pr.cost * u.factor), qty: l.qty, discount: l.discount || 0 };
       });
-      var bill = { no: billNo(d.nextBill, d.prefix), date: new Date().toISOString(), lines: lines, discount: tot.discount, total: tot.total, method: method, received: received, status: 'ok', cashier: d.settings.cashier, actions: (c.actions || 0) + 1 };
+      var bill = { id: uid(), no: billNo(d.nextBill, d.prefix), date: new Date().toISOString(), lines: lines, discount: tot.discount, total: tot.total, method: method, received: received, status: 'ok', cashier: d.settings.cashier, actions: (c.actions || 0) + 1 };
       commit(function (n) {
         n.bills.push(bill); n.nextBill++;
         lines.forEach(function (l) {
           var pr = l.pid ? findProduct(n, l.pid) : null;
-          if (pr && pr.stock != null) { pr.stock = Math.max(0, pr.stock - l.qty * l.factor); n.moves.push({ date: bill.date, pid: pr.id, qty: -l.qty * l.factor, type: 'sale', note: { th: 'บิล #' + bill.no, en: 'Bill #' + bill.no } }); }
+          if (pr && pr.stock != null) { pr.stock = Math.max(0, pr.stock - l.qty * l.factor); n.moves.push({ id: uid(), date: bill.date, pid: pr.id, qty: -l.qty * l.factor, type: 'sale', note: { th: 'บิล #' + bill.no, en: 'Bill #' + bill.no } }); }
         });
         if (n.moves.length > 3000) n.moves = n.moves.slice(-3000);
       });
@@ -2738,9 +2961,16 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
     /* --- status pills --- */
     var pills = [
       h(A.StatusPill, { key: 'p', kind: 'printer', state: 'ok', lang: lang }),
+      cloudOn && user && (syncState !== 'ok' || !online) ? h(A.StatusPill, { key: 'sy', kind: 'sync', state: 'warn', lang: lang }) : null,
       online ? null : h(A.StatusPill, { key: 'n', kind: 'network', state: 'warn', lang: lang })
     ];
     var statusEl = h(Frag, null, pills);
+
+    /* --- cloud gate: sign in, then wait for the shop's data --- */
+    if (cloudOn && (user === undefined || (user && !ready))) {
+      return h('div', { className: 'app gate' }, h('div', { className: 'gate-box card' }, h(A.Logo, { height: 28 }), h('div', { className: 'ap-cap' }, user ? tx('loadingData') : tx('checkingLogin'))));
+    }
+    if (cloudOn && !user) return h(LoginView, { lang: lang, setLang: setLang, tx: tx, signIn: C.signIn });
 
     /* --- view --- */
     var common = { key: shop, db: db, shop: shop, lang: lang, tx: tx, commit: commit, toast: toast, confirm: confirm, askPin: askPin, print: print };
@@ -2758,13 +2988,14 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
       else if (view === 'settings') page = h(SettingsView, Object.assign({}, common, { setLang: setLang, replaceDb: function (d) { setDb(d); setCarts({ stationery: emptyCart(), parcel: emptyCart() }); },
         // keep products and settings, drop every sample sale so both shops start at bill 0001
         startFresh: function () {
-          setFull(function (f) {
-            var n = clone(f);
-            Object.keys(n.shops).forEach(function (k) { var s = n.shops[k]; s.bills = []; s.moves = []; s.closes = []; s.held = []; s.nextBill = 1; });
-            return n;
-          });
+          var n = clone(fullRef.current);
+          Object.keys(n.shops).forEach(function (k) { var s = n.shops[k]; s.bills = []; s.moves = []; s.closes = []; s.held = []; s.nextBill = 1; });
+          change(n);
           setCarts({ stationery: emptyCart(), parcel: emptyCart() });
-        } }));
+        },
+        exportFull: function () { return fullRef.current; },
+        cloudUser: cloudOn && user ? user.email : null,
+        signOut: function () { C.signOut(); } }));
       else page = h(SellView, Object.assign({}, common, { cart: cart, query: query, setQuery: setQuery, cat: cat, setCat: setCat, selected: selected, setSelected: setSelected, flashKey: flashKey, sheet: sheet, setSheet: setSheet,
         addProduct: addProduct, setQty: setQty, setUnit: setUnit, removeLine: removeLine, clearCart: clearCart, keyLine: keyLine, hold: hold, openRecall: openRecall, openDiscount: openDiscount, openCustom: openCustom, goPay: goPay, simulateScan: simulateScan }));
       main = h(Frag, null,
@@ -2837,6 +3068,31 @@ function(a,b,c){if(!Vd(b))throw Error(m(200));return Wd(null,a,b,!1,c)};Q.unmoun
         return h(A.Toast, { key: t.id, message: t.message, tone: t.tone, lang: lang, onAction: t.undo ? function () { t.undo(); dismissToast(t.id); } : false });
       })),
       printEl);
+  }
+
+  function LoginView(p) {
+    var tx = p.tx;
+    var _e = useState(''), email = _e[0], setEmail = _e[1];
+    var _p = useState(''), pw = _p[0], setPw = _p[1];
+    var _b = useState(false), busy = _b[0], setBusy = _b[1];
+    var _r = useState(''), err = _r[0], setErr = _r[1];
+    function submit(e) {
+      e.preventDefault(); if (!email || !pw) return;
+      setBusy(true); setErr('');
+      p.signIn(email.trim(), pw).catch(function (x) {
+        setBusy(false);
+        setErr(/network/i.test(x.code || '') ? tx('loginOffline') : tx('loginWrong'));
+      });
+    }
+    return h('div', { className: 'app gate' },
+      h('form', { className: 'gate-box card', onSubmit: submit },
+        h('div', { className: 'lr', style: { alignItems: 'center' } }, h(A.Logo, { height: 24 }), h(A.LangToggle, { value: p.lang, onChange: p.setLang })),
+        h('h1', { className: 'h2' }, tx('loginTitle')),
+        h('span', { className: 'ap-cap' }, tx('loginHint')),
+        h(Field, { id: 'login-email', label: tx('loginEmail'), value: email, onChange: setEmail, input: { type: 'email', autoComplete: 'username', autoFocus: true, inputMode: 'email' } }),
+        h(Field, { id: 'login-pw', label: tx('loginPassword'), value: pw, onChange: setPw, input: { type: 'password', autoComplete: 'current-password' } }),
+        err ? h(A.Alert, { tone: 'danger' }, err) : null,
+        h(A.Button, { type: 'submit', variant: 'primary', size: 'lg', block: true, icon: 'lock', disabled: busy || !email || !pw }, busy ? tx('loginBusy') : tx('loginBtn'))));
   }
 
   function CloseSummary(p) {
