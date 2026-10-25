@@ -1695,7 +1695,8 @@ window.FIREBASE_CONFIG = {
       cbA4Hint: 'ตั้งหน้าต่างพิมพ์เป็น A4 แนวนอน แล้วตัดตามเส้นประตรงกลาง', cbA5Hint: 'ตั้งหน้าต่างพิมพ์เป็นกระดาษ A5',
       cbPickHint: 'ติ๊กเลือกบิลเพื่อพิมพ์', cbDelete: 'ลบบิล', cbDeletePicked: 'ลบที่เลือก ({x})', cbDeleteQ: 'ลบบิลเงินสด {x}?', cbDeleteManyQ: 'ลบบิลเงินสด {x} ใบ?',
       cbDeleteBody: 'บิล {x} จะหายจากรายการทุกเครื่อง กู้คืนไม่ได้ (เลขที่บิลถัดไปไม่เปลี่ยน)', cbDeleted: 'ลบบิล {x} แล้ว',
-      cbPrintPicked: 'พิมพ์ {x} บิล', cbPrintPickedA4: 'พิมพ์ {x} บิล ({y} แผ่น)',
+      cbPrintPicked: 'พิมพ์ {x} บิล · บิลละ {c} ฉบับ', cbCopies: 'จำนวนฉบับต่อบิล', cbSheetsA4: 'ใช้ A4 {s} แผ่น (2 ฉบับต่อแผ่น)', cbSheetsA5: 'ใช้ A5 {s} แผ่น',
+      cbPrintCopies: 'พิมพ์ {c} ฉบับ', cbPrintedCopies: 'ส่งบิลเลขที่ {x} ไปพิมพ์ {c} ฉบับ ({s} แผ่น) · เริ่มบิลใหม่เลขที่ {y}',
       loginWrong: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง ลองอีกครั้ง', loginOffline: 'ยังไม่มีอินเทอร์เน็ต ต้องต่อเน็ตครั้งแรกเพื่อเข้าสู่ระบบ'
     },
     en: {
@@ -1778,7 +1779,8 @@ window.FIREBASE_CONFIG = {
       cbA4Hint: 'Set the print window to A4 landscape, then cut along the dashed line', cbA5Hint: 'Set the print window to A5 paper',
       cbPickHint: 'Tick bills to print', cbDelete: 'Delete bill', cbDeletePicked: 'Delete selected ({x})', cbDeleteQ: 'Delete cash bill {x}?', cbDeleteManyQ: 'Delete {x} cash bills?',
       cbDeleteBody: 'Bill {x} is removed from every device and cannot be restored (the next bill number stays the same).', cbDeleted: 'Deleted bill {x}',
-      cbPrintPicked: 'Print {x} bills', cbPrintPickedA4: 'Print {x} bills ({y} sheets)',
+      cbPrintPicked: 'Print {x} bills · {c} copies each', cbCopies: 'Copies per bill', cbSheetsA4: 'Uses {s} A4 sheets (2 copies per sheet)', cbSheetsA5: 'Uses {s} A5 sheets',
+      cbPrintCopies: 'Print {c} copies', cbPrintedCopies: 'Sent bill {x} to print, {c} copies ({s} sheets) · new bill {y}',
       loginWrong: 'Wrong email or password, try again', loginOffline: 'No internet yet; the first sign-in needs a connection'
     }
   };
@@ -3193,7 +3195,7 @@ window.FIREBASE_CONFIG = {
      CASH BILL A5 — written by hand, shop header set once, printed on A5
      ====================================================================== */
   var CB_ROWS = 14;
-  var CB_DEFAULT = { name: 'ร้านอมรภัณฑ์', address: '45 หมู่ 5 ต.นาโพธิ์ อ.สวี จ.ชุมพร 86130', tel: '077-583262', fax: '077-531032', taxId: '3100603391005', book: '1', next: '1', receiver: 'อมรรัตน์', setup: false, paper: 'a4', a4Mode: 'copy' };
+  var CB_DEFAULT = { name: 'ร้านอมรภัณฑ์', address: '45 หมู่ 5 ต.นาโพธิ์ อ.สวี จ.ชุมพร 86130', tel: '077-583262', fax: '077-531032', taxId: '3100603391005', book: '1', next: '1', receiver: 'อมรรัตน์', setup: false, paper: 'a4', copies: 2 };
 
   // 1,250.50 → หนึ่งพันสองร้อยห้าสิบบาทห้าสิบสตางค์
   function bahtText(n) {
@@ -3273,8 +3275,6 @@ window.FIREBASE_CONFIG = {
     }));
   }
 
-  var CB_PENDING = 'amornphan-pos:cb-pending';
-
   function emptyItem() { return { qty: '1', unit: '', desc: '', price: '' }; }
 
   function CashBillView(p) {
@@ -3305,18 +3305,17 @@ window.FIREBASE_CONFIG = {
     function nextBill() { return { book: f.book, no: String(num(f.no) + 1).padStart(Math.max(4, f.no.length), '0'), date: thDate(), receiver: s.receiver, customer: '', address: '', items: [emptyItem()], savedId: null }; }
     function doSave() { if (save()) p.toast(fill(tx('cbSaved'), { x: f.no })); }
     var paper = s.paper === 'a5' ? 'a5' : 'a4';
-    var _pd = useState(function () { return load(CB_PENDING); }), pending = _pd[0], setPendingState = _pd[1];
-    function setPending(v) { setPendingState(v); store(CB_PENDING, v); }
+    // how many copies of the same bill to print; A4 holds two of them side by side
+    var copies = Math.max(1, Math.min(20, num(s.copies) || 2));
+    var sheets = paper === 'a4' ? Math.ceil(copies / 2) : copies;
     var _sel = useState([]), picked = _sel[0], setPicked = _sel[1];
     function setCb(k, v) { p.commit(function (n) { var cb = Object.assign({}, CB_DEFAULT, n.settings.cashbill || {}); cb[k] = v; n.settings.cashbill = cb; }); }
     function print(bills) { p.printA5({ format: paper, bills: bills }); }
-    // A4 holds two different bills: the first waits until the next one is printed, or "print now"
+    function times(one) { var out = []; for (var i = 0; i < copies; i++) out.push(one); return out; }
     function doPrint() {
-      var rec = save(); if (!rec) return;
-      var cur = { id: rec.id, shop: shop, bill: billData, items: items }, no = f.no;
-      if (paper === 'a5') { print([cur]); p.toast(fill(tx('cbPrinted'), { x: no, y: nextBill().no })); }
-      else if (pending) { print([pending, cur]); setPending(null); p.toast(fill(tx('cbPrintedPair'), { x: pending.bill.no, y: no })); }
-      else { setPending(cur); p.toast(fill(tx('cbWaiting'), { x: no })); }
+      if (!save()) return;
+      print(times({ shop: shop, bill: billData, items: items }));
+      p.toast(fill(tx('cbPrintedCopies'), { x: f.no, c: copies, s: sheets, y: nextBill().no }));
       setF(nextBill());
     }
     // deleting a printed bill cannot be undone, so it asks first and needs the owner PIN
@@ -3329,7 +3328,6 @@ window.FIREBASE_CONFIG = {
         body: fill(tx('cbDeleteBody'), { x: names }), tone: 'danger', ok: tx('cbDelete'), pin: true,
         onOk: function () {
           p.commit(function (n) { n.cashbills = (n.cashbills || []).filter(function (x) { return ids.indexOf(x.id) < 0; }); });
-          if (pending && ids.indexOf(pending.id) >= 0) setPending(null);
           if (f.savedId && ids.indexOf(f.savedId) >= 0) setF(Object.assign({}, f, { savedId: null }));
           setPicked(picked.filter(function (x) { return ids.indexOf(x) < 0; }));
           p.toast(fill(tx('cbDeleted'), { x: names }), 'warn', false);
@@ -3338,7 +3336,8 @@ window.FIREBASE_CONFIG = {
     }
     function printBlank() { print(paper === 'a5' ? [{ shop: shop }] : [{ shop: shop }, { shop: shop }]); }
     function printPicked() {
-      var chosen = list.filter(function (b) { return picked.indexOf(b.id) >= 0; }).reverse().map(function (b) { return { shop: shop, bill: b, items: b.items }; });
+      var chosen = [];
+      list.filter(function (b) { return picked.indexOf(b.id) >= 0; }).reverse().forEach(function (b) { chosen = chosen.concat(times({ shop: shop, bill: b, items: b.items })); });
       if (chosen.length) print(chosen);
     }
     function saveShop() {
@@ -3392,21 +3391,20 @@ window.FIREBASE_CONFIG = {
         h(A.Button, { variant: 'secondary', size: 'lg', onClick: function () { setF(Object.assign({}, f, { customer: '', address: '', items: [emptyItem()], savedId: null })); } }, tx('cbClear')),
         h(A.Button, { variant: 'secondary', size: 'lg', icon: 'check', disabled: !total, onClick: doSave }, f.savedId ? tx('cbSavedBtn') : tx('save')),
         h(A.Button, { variant: 'pay', size: 'lg', icon: 'printer', disabled: !total, onClick: doPrint },
-          paper === 'a5' ? tx('cbPrint') : pending ? tx('cbPrintA4Pair') : tx('cbPrintA4Wait'))));
+          fill(tx('cbPrintCopies'), { c: copies }))));
 
     var cur = { shop: shop, bill: billData, items: items };
     var sheet;
     if (paper === 'a5') sheet = h('div', { className: 'cb-preview-frame' }, h('div', { className: 'cb-preview-scale' }, h(CashBillPaper, cur)));
-    else {
-      var pair = pending ? [pending, cur] : [cur, { shop: shop, faint: true }];
-      sheet = h('div', { className: 'cb-preview-a4' }, h('div', { className: 'cb-preview-a4-scale' }, h(CashBillSheets, { format: 'a4', bills: pair })));
-    }
+    else sheet = h('div', { className: 'cb-preview-a4' }, h('div', { className: 'cb-preview-a4-scale' }, h(CashBillSheets, { format: 'a4', bills: copies > 1 ? [cur, cur] : [cur] })));
     var preview = h('aside', { className: 'cb-preview' },
       h('div', { className: 'lr', style: { alignSelf: 'stretch', alignItems: 'center', flexWrap: 'wrap', gap: 8 } },
         h('span', { style: { fontWeight: 600 } }, tx('cbPreview')),
         h('button', { type: 'button', className: 'ap-btn ap-btn-ghost', style: { minHeight: 32 }, onClick: printBlank }, tx('cbBlank'))),
       h(Seg, { label: tx('cbPaper'), style: { alignSelf: 'stretch' }, value: paper, onChange: function (v) { setCb('paper', v); }, options: [['a4', tx('cbPaperA4')], ['a5', tx('cbPaperA5')]] }),
-      paper === 'a4' && pending ? h(A.Alert, { tone: 'info', icon: 'printer', style: { alignSelf: 'stretch' }, action: h(A.Button, { variant: 'secondary', onClick: function () { print([pending]); setPending(null); } }, tx('cbPrintNow')) }, fill(tx('cbPendingNote'), { x: pending.bill.no })) : null,
+      h('div', { className: 'lr', style: { alignSelf: 'stretch', alignItems: 'center', gap: 12 } },
+        h('div', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { className: 'set-t' }, tx('cbCopies')), h('span', { className: 'ap-cap' }, fill(tx(paper === 'a4' ? 'cbSheetsA4' : 'cbSheetsA5'), { s: sheets }))),
+        h(A.QtyStepper, { value: copies, min: 1, max: 20, label: tx('cbCopies'), onChange: function (v) { setCb('copies', v); } })),
       sheet,
       h('span', { className: 'ap-cap' }, paper === 'a4' ? tx('cbA4Hint') : tx('cbA5Hint')));
 
@@ -3433,7 +3431,7 @@ window.FIREBASE_CONFIG = {
       overlay = h(A.Dialog, { title: fill(tx('cbList'), { x: list.length }), icon: 'receipt', actions: [
         h(A.Button, { key: 'c', variant: 'secondary', size: 'lg', onClick: function () { setShowList(false); setPicked([]); } }, tx('close')),
         picked.length ? h(A.Button, { key: 'd', variant: 'danger-quiet', size: 'lg', icon: 'trash', onClick: function () { delBills(picked); } }, fill(tx('cbDeletePicked'), { x: picked.length })) : null,
-        h(A.Button, { key: 'p', variant: 'primary', size: 'lg', icon: 'printer', disabled: !picked.length, onClick: printPicked }, picked.length ? fill(tx(paper === 'a4' ? 'cbPrintPickedA4' : 'cbPrintPicked'), { x: picked.length, y: Math.ceil(picked.length / 2) }) : tx('cbPickHint'))] },
+        h(A.Button, { key: 'p', variant: 'primary', size: 'lg', icon: 'printer', disabled: !picked.length, onClick: printPicked }, picked.length ? fill(tx('cbPrintPicked'), { x: picked.length, c: copies }) : tx('cbPickHint'))] },
         list.length ? h('div', { className: 'held-list cb-list', style: { marginTop: 8 } }, list.map(function (b) {
           var on = picked.indexOf(b.id) >= 0;
           return h('label', { key: b.id, className: 'held-item' },
@@ -3441,7 +3439,7 @@ window.FIREBASE_CONFIG = {
             h('span', { className: 'mono', style: { width: 64 } }, b.book + '/' + b.no),
             h('span', { className: 'grow', style: { display: 'flex', flexDirection: 'column', minWidth: 0 } }, h('span', { className: 'clamp1', style: { fontWeight: 600 } }, b.customer || tx('cbNoName')), h('span', { className: 'ap-cap' }, b.date)),
             h('b', { className: 'ap-num' }, baht(b.total)),
-            h(A.Button, { variant: 'ghost', icon: 'printer', 'aria-label': tx('reprint'), title: tx('reprint'), onClick: function (e) { e.preventDefault(); print([{ shop: shop, bill: b, items: b.items }]); } }),
+            h(A.Button, { variant: 'ghost', icon: 'printer', 'aria-label': tx('reprint'), title: tx('reprint'), onClick: function (e) { e.preventDefault(); print(times({ shop: shop, bill: b, items: b.items })); } }),
             h(A.Button, { variant: 'danger-quiet', icon: 'trash', 'aria-label': tx('cbDelete') + ' ' + b.no, title: tx('cbDelete'), onClick: function (e) { e.preventDefault(); delBills([b.id]); } }));
         })) : h('div', { className: 'ap-cap', style: { fontSize: 16 } }, tx('cbNone')));
     }
