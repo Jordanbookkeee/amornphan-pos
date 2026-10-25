@@ -1679,6 +1679,10 @@ window.FIREBASE_CONFIG = {
       checkingLogin: 'กำลังตรวจสอบการเข้าสู่ระบบ…', loadingData: 'กำลังโหลดข้อมูลร้าน…',
       loginTitle: 'เข้าสู่ระบบร้าน', loginHint: 'ใช้อีเมลและรหัสผ่านของร้าน ทุกเครื่องที่เข้าระบบจะเห็นข้อมูลเดียวกัน',
       loginEmail: 'อีเมล', loginPassword: 'รหัสผ่าน', loginBtn: 'เข้าสู่ระบบ', loginBusy: 'กำลังเข้าสู่ระบบ…',
+      backupHintCloud: 'ข้อมูลซิงก์ขึ้นระบบออนไลน์ของร้านแล้ว แต่ควรดาวน์โหลดไฟล์สำรองเก็บไว้เดือนละครั้ง',
+      rmSamples: 'ลบสินค้าตัวอย่าง', rmSamplesHint: 'มีสินค้าตัวอย่าง {x} รายการ (ทั้งสองร้าน) สินค้าที่ร้านเพิ่มเองจะไม่ถูกลบ', rmSamplesNone: 'ไม่มีสินค้าตัวอย่างเหลืออยู่แล้ว',
+      rmSamplesQ: 'ลบสินค้าตัวอย่าง {x} รายการ?', rmSamplesBody: 'ลบจากทั้งร้านเครื่องเขียนและร้านพัสดุ ทุกเครื่องที่ซิงก์ ระบบจะดาวน์โหลดไฟล์สำรองให้ก่อนลบ บิลเก่ายังอยู่ ตะกร้าและบิลที่พักไว้จะถูกล้าง',
+      rmSamplesBtn: 'ลบสินค้าตัวอย่าง', rmSamplesDone: 'ลบสินค้าตัวอย่าง {x} รายการแล้ว · ดาวน์โหลดไฟล์สำรองไว้ให้แล้ว',
       npBtn: 'สินค้าใหม่', npFromSearch: 'ไม่ใช่ตัวไหนเลย · เพิ่มสินค้าใหม่ “{x}”', npNotFound: 'ไม่พบ “{x}” · เพิ่มเป็นสินค้าใหม่', npTitle: 'เพิ่มสินค้าใหม่เข้าสต็อก',
       npHint: 'สินค้าจะถูกเพิ่มในหน้าสินค้า และใส่ในรายการรับเข้านี้ทันที แก้รายละเอียดเพิ่มได้ภายหลังที่หน้าสินค้า', npQty: 'จำนวนที่รับเข้า', npSave: 'เพิ่มและรับเข้า', npAdded: 'เพิ่ม “{x}” แล้ว · อยู่ในรายการรับเข้า',
       w80: 'ความกว้างพิมพ์ (กระดาษ 80 mm)', w80Hint: 'ถ้าด้านขวาพิมพ์ไม่หมด ให้ลดลง (ค่าเริ่มต้น 72 มม.)',
@@ -1766,6 +1770,10 @@ window.FIREBASE_CONFIG = {
       checkingLogin: 'Checking sign-in…', loadingData: 'Loading shop data…',
       loginTitle: 'Sign in to the shop', loginHint: 'Use the shop email and password. Every signed-in device sees the same data.',
       loginEmail: 'Email', loginPassword: 'Password', loginBtn: 'Sign in', loginBusy: 'Signing in…',
+      backupHintCloud: 'Data is synced to the shop’s online account; still download a backup file about once a month',
+      rmSamples: 'Remove sample products', rmSamplesHint: '{x} sample products in both shops; products the shop added are kept', rmSamplesNone: 'No sample products left',
+      rmSamplesQ: 'Remove {x} sample products?', rmSamplesBody: 'Removed from both shops on every synced device. A backup file downloads first. Old bills stay; carts and held bills are cleared.',
+      rmSamplesBtn: 'Remove sample products', rmSamplesDone: 'Removed {x} sample products · backup file downloaded',
       npBtn: 'New product', npFromSearch: 'None of these · add “{x}” as a new product', npNotFound: '“{x}” not found · add it as a new product', npTitle: 'Add a new product to stock',
       npHint: 'It is added to Products and to this receipt right away; fill in more details later on the Products page', npQty: 'Quantity received', npSave: 'Add and receive', npAdded: 'Added “{x}” to the receive list',
       w80: 'Print width (80 mm paper)', w80Hint: 'If the right edge is cut off, make it smaller (default 72 mm)',
@@ -1800,7 +1808,10 @@ window.FIREBASE_CONFIG = {
     return { version: 2, shop: 'stationery', shops: { stationery: st, parcel: parcelShop() }, users: d.users, settings: d.settings };
   }
 
-  window.POSData = { seed: seed, migrate: migrate, strings: S };
+  // ids of the products that only exist as sample data (products the shop adds get random ids)
+  var SAMPLE_IDS = P.map(function (r) { return r[0]; }).concat(parcelProducts().map(function (p) { return p.id; }));
+
+  window.POSData = { seed: seed, migrate: migrate, strings: S, sampleIds: SAMPLE_IDS };
 })();
 
 </script>
@@ -2790,13 +2801,23 @@ window.FIREBASE_CONFIG = {
             p.commit(function (d) { d.cats.push(c); }); p.toast(fill(tx('catAdded'), { x: c[lang] })); setNc({ th: '', en: '' });
           } }, tx('addCat'))));
     } else {
+      var nSample = p.countSamples();
       body = h(Frag, null,
-        h('div', { className: 'set-row', style: { flexWrap: 'wrap', borderBottom: 0, paddingTop: 0 } },
+        h('div', { className: 'set-row', style: { flexWrap: 'wrap', paddingTop: 0 } },
+          h('div', { className: 'grow' }, h('span', { className: 'set-t' }, tx('rmSamples')), h('span', { className: 'ap-cap' }, nSample ? fill(tx('rmSamplesHint'), { x: nSample }) : tx('rmSamplesNone'))),
+          h(A.Button, { variant: 'danger-quiet', icon: 'trash', disabled: !nSample, onClick: function () {
+            p.confirm({ title: fill(tx('rmSamplesQ'), { x: nSample }), body: tx('rmSamplesBody'), tone: 'danger', ok: tx('rmSamplesBtn'), pin: true, onOk: function () {
+              download('amornphan-backup-before-cleanup-' + new Date().toLocaleDateString('en-CA') + '.json', JSON.stringify(p.exportFull()), 'application/json');
+              var gone = p.removeSamples();
+              p.toast(fill(tx('rmSamplesDone'), { x: gone }), 'warn', false);
+            } });
+          } }, tx('rmSamples'))),
+        h('div', { className: 'set-row', style: { flexWrap: 'wrap', borderBottom: 0 } },
           h('div', { className: 'grow' }, h('span', { className: 'set-t' }, tx('goLive')), h('span', { className: 'ap-cap' }, tx('goLiveHint'))),
           h(A.Button, { variant: 'primary', icon: 'check', onClick: function () {
             p.confirm({ title: tx('goLiveQ'), body: tx('goLiveBody'), tone: 'warn', ok: tx('goLiveBtn'), pin: true, onOk: function () { p.startFresh(); p.toast(tx('goLiveDone'), 'success', false); } });
           } }, tx('goLive'))),
-        h(A.Alert, { tone: 'info', icon: 'info' }, tx('backupHint')),
+        h(A.Alert, { tone: 'info', icon: 'info' }, tx(p.cloudUser ? 'backupHintCloud' : 'backupHint')),
         h('div', { className: 'row-c', style: { paddingTop: 16, flexWrap: 'wrap' } },
           h(A.Button, { variant: 'primary', icon: 'upload', onClick: function () { download('amornphan-backup-' + new Date().toLocaleDateString('en-CA') + '.json', JSON.stringify(p.exportFull()), 'application/json'); } }, tx('exportData')),
           h('label', { className: 'ap-btn ap-btn-secondary' }, h(A.Icon, { name: 'copy', size: 22 }), h('span', null, tx('importData')),
@@ -3166,6 +3187,24 @@ window.FIREBASE_CONFIG = {
           setCarts({ stationery: emptyCart(), parcel: emptyCart() });
         },
         exportFull: function () { return fullRef.current; },
+        countSamples: function () {
+          var ids = D.sampleIds || [], n = 0;
+          Object.keys(full.shops).forEach(function (k) { full.shops[k].products.forEach(function (x) { if (ids.indexOf(x.id) >= 0) n++; }); });
+          return n;
+        },
+        // drop the sample products from both shops; products the shop added and all bills stay
+        removeSamples: function () {
+          var ids = D.sampleIds || [], n = clone(fullRef.current), gone = 0;
+          Object.keys(n.shops).forEach(function (k) {
+            var before = n.shops[k].products.length;
+            n.shops[k].products = n.shops[k].products.filter(function (x) { return ids.indexOf(x.id) < 0; });
+            gone += before - n.shops[k].products.length;
+            n.shops[k].held = [];
+          });
+          change(n);
+          setCarts({ stationery: emptyCart(), parcel: emptyCart() });
+          return gone;
+        },
         cloudUser: cloudOn && user ? user.email : null,
         signOut: function () { C.signOut(); } }));
       else page = h(SellView, Object.assign({}, common, { cart: cart, query: query, setQuery: setQuery, cat: cat, setCat: setCat, selected: selected, setSelected: setSelected, flashKey: flashKey, sheet: sheet, setSheet: setSheet,
