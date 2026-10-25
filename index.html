@@ -1607,7 +1607,7 @@ window.FIREBASE_CONFIG = {
       users: [{ id: 'owner', th: 'เจ้าของ', en: 'Owner' }, { id: 'mae', th: 'แม่', en: 'Mae' }],
       settings: {
         shop: { name: 'ร้านอมรภัณฑ์', nameEn: 'Amornphan Stationery', address: '12/3 ซ.ลาดพร้าว 18 กรุงเทพฯ', addressEn: '12/3 Soi Lat Phrao 18, Bangkok', phone: '081-234-5678', promptpay: '081-234-5678' },
-        paper: 58, receiptLang: 'th', autoPrint: true, showLogo: true, openDrawer: true,
+        paper: 58, printWidth80: 72, receiptLang: 'th', autoPrint: true, showLogo: true, openDrawer: true,
         footer: 'ขอบคุณที่อุดหนุนค่ะ · เปลี่ยนสินค้าได้ใน 7 วัน', footerEn: 'Thank you · exchanges within 7 days',
         pin: '1234', cashier: 'mae', theme: 'light', float: 1000, sound: true
       }
@@ -1679,6 +1679,9 @@ window.FIREBASE_CONFIG = {
       checkingLogin: 'กำลังตรวจสอบการเข้าสู่ระบบ…', loadingData: 'กำลังโหลดข้อมูลร้าน…',
       loginTitle: 'เข้าสู่ระบบร้าน', loginHint: 'ใช้อีเมลและรหัสผ่านของร้าน ทุกเครื่องที่เข้าระบบจะเห็นข้อมูลเดียวกัน',
       loginEmail: 'อีเมล', loginPassword: 'รหัสผ่าน', loginBtn: 'เข้าสู่ระบบ', loginBusy: 'กำลังเข้าสู่ระบบ…',
+      npBtn: 'สินค้าใหม่', npFromSearch: 'ไม่ใช่ตัวไหนเลย · เพิ่มสินค้าใหม่ “{x}”', npNotFound: 'ไม่พบ “{x}” · เพิ่มเป็นสินค้าใหม่', npTitle: 'เพิ่มสินค้าใหม่เข้าสต็อก',
+      npHint: 'สินค้าจะถูกเพิ่มในหน้าสินค้า และใส่ในรายการรับเข้านี้ทันที แก้รายละเอียดเพิ่มได้ภายหลังที่หน้าสินค้า', npQty: 'จำนวนที่รับเข้า', npSave: 'เพิ่มและรับเข้า', npAdded: 'เพิ่ม “{x}” แล้ว · อยู่ในรายการรับเข้า',
+      w80: 'ความกว้างพิมพ์ (กระดาษ 80 mm)', w80Hint: 'ถ้าด้านขวาพิมพ์ไม่หมด ให้ลดลง (ค่าเริ่มต้น 72 มม.)',
       cbOpen: 'ออกบิลเงินสด A5', cbTitle: 'ออกบิลเงินสด', cbSub: 'กรอกรายการเอง · พิมพ์ A4 (2 บิล/แผ่น) หรือ A5', cbList: 'บิลที่ออกแล้ว ({x})',
       cbOnce: 'ตั้งค่าครั้งเดียว ใช้กับทุกบิล', cbEditShop: 'แก้ไขข้อมูลร้าน', cbBook: 'เล่มที่', cbNo: 'เลขที่', cbDate: 'วันที่', cbReceiver: 'ผู้รับเงิน',
       cbCustomer: 'นามลูกค้า', cbCustomerId: 'เลขประจำตัว (13 หลัก)', cbAddress: 'ที่อยู่', cbOptional: 'ไม่ระบุก็ได้', cbIfAny: 'ถ้ามี',
@@ -1763,6 +1766,9 @@ window.FIREBASE_CONFIG = {
       checkingLogin: 'Checking sign-in…', loadingData: 'Loading shop data…',
       loginTitle: 'Sign in to the shop', loginHint: 'Use the shop email and password. Every signed-in device sees the same data.',
       loginEmail: 'Email', loginPassword: 'Password', loginBtn: 'Sign in', loginBusy: 'Signing in…',
+      npBtn: 'New product', npFromSearch: 'None of these · add “{x}” as a new product', npNotFound: '“{x}” not found · add it as a new product', npTitle: 'Add a new product to stock',
+      npHint: 'It is added to Products and to this receipt right away; fill in more details later on the Products page', npQty: 'Quantity received', npSave: 'Add and receive', npAdded: 'Added “{x}” to the receive list',
+      w80: 'Print width (80 mm paper)', w80Hint: 'If the right edge is cut off, make it smaller (default 72 mm)',
       cbOpen: 'Cash bill A5', cbTitle: 'Cash bill', cbSub: 'Type the items · print on A4 (2 per sheet) or A5', cbList: 'Issued bills ({x})',
       cbOnce: 'set once, used on every bill', cbEditShop: 'Edit shop details', cbBook: 'Book', cbNo: 'Bill no.', cbDate: 'Date', cbReceiver: 'Received by',
       cbCustomer: 'Customer', cbCustomerId: 'ID / tax no. (13 digits)', cbAddress: 'Address', cbOptional: 'Optional', cbIfAny: 'If any',
@@ -2277,6 +2283,29 @@ window.FIREBASE_CONFIG = {
     }
     useEffect(function () { if (p.initialPid) { addRecv(findProduct(db, p.initialPid)); } }, []);
     var results = q.trim() ? tracked.filter(function (x) { return matchProduct(x, q.trim().toLowerCase()); }).slice(0, 6) : [];
+
+    // a product the shop has never stocked: create it here and put it straight on the receive list
+    var _np = useState(null), np = _np[0], setNp = _np[1];
+    var _ne = useState(''), npErr = _ne[0], setNpErr = _ne[1];
+    function openNew(text) {
+      var t = String(text || '').trim(), isCode = /^\d{6,}$/.test(t);
+      setNp({ nameTh: isCode ? '' : t, nameEn: '', barcode: isCode ? t : '', cat: db.cats[0] ? db.cats[0].id : '', unitTh: 'ชิ้น', unitEn: 'pc', cost: '', price: '', lowAt: '5', qty: '1' });
+      setNpErr(''); setQ('');
+    }
+    function npSet(k) { return function (v) { var o = Object.assign({}, np); o[k] = v; setNp(o); setNpErr(''); }; }
+    function saveNew() {
+      if (!np.nameTh.trim() || !(num(np.price) > 0)) { setNpErr(tx('required')); return; }
+      var code = np.barcode.trim();
+      if (code) { var dup = findByBarcode(db, code); if (dup) { setNpErr(fill(tx('dupBarcode'), { x: dup.p.name[lang] })); return; } }
+      var id = 'p' + uid();
+      var rec = { id: id, sku: 'SKU-' + id.slice(-5).toUpperCase(), name: { th: np.nameTh.trim(), en: np.nameEn.trim() || np.nameTh.trim() }, cat: np.cat, cost: num(np.cost), lowAt: num(np.lowAt), icon: 'box', best: false, stock: 0,
+        units: [{ th: np.unitTh || 'ชิ้น', en: np.unitEn || np.unitTh || 'pc', factor: 1, price: num(np.price), barcode: code }] };
+      p.commit(function (n) { n.products.unshift(rec); });
+      var qn = Math.max(1, Math.round(num(np.qty)) || 1);
+      setRecv(function (r) { return Object.assign({}, r, { lines: r.lines.concat([{ pid: id, qty: String(qn), cost: String(num(np.cost)) }]) }); });
+      p.toast(fill(tx('npAdded'), { x: rec.name[lang] }));
+      setNp(null);
+    }
     function onRecvSearch(v) {
       setQ(v);
       var hit = /^\d{8,14}$/.test(v) ? findByBarcode(db, v) : null;
@@ -2358,13 +2387,17 @@ window.FIREBASE_CONFIG = {
             h(Field, { id: 'st-sup', label: tx('supplier'), value: recv.supplier, onChange: function (v) { setRecv(Object.assign({}, recv, { supplier: v })); } }),
             h(Field, { id: 'st-doc', label: tx('docNo'), value: recv.doc, onChange: function (v) { setRecv(Object.assign({}, recv, { doc: v })); }, input: { className: 'f-input mono' } }),
             h(Field, { id: 'st-date', label: tx('recvDate'), value: A.formatDate(new Date(), lang), onChange: function () {}, input: { readOnly: true, className: 'f-input ap-num' } })),
-          h('div', { style: { position: 'relative' } },
-            h(A.SearchField, { value: q, lang: lang, scanning: true, placeholder: tx('scanRecv'), onChange: function (e) { onRecvSearch(e.target.value); } }),
-            results.length ? h('div', { className: 'card', style: { position: 'absolute', left: 0, right: 0, top: 68, zIndex: 5, boxShadow: 'var(--shadow-raised)', overflow: 'hidden' } },
+          h('div', { className: 'row-c', style: { position: 'relative', alignItems: 'stretch' } },
+            h('div', { className: 'grow', onKeyDown: function (e) { if (e.key === 'Enter' && q.trim() && !results.length) { e.preventDefault(); openNew(q); } } },
+              h(A.SearchField, { value: q, lang: lang, scanning: true, placeholder: tx('scanRecv'), onChange: function (e) { onRecvSearch(e.target.value); } })),
+            h(A.Button, { variant: 'secondary', size: 'lg', icon: 'plus', onClick: function () { openNew(q); } }, tx('npBtn')),
+            q.trim() ? h('div', { className: 'card', style: { position: 'absolute', left: 0, right: 0, top: 68, zIndex: 5, boxShadow: 'var(--shadow-raised)', overflow: 'hidden' } },
               results.map(function (x) {
                 return h('button', { key: x.id, type: 'button', className: 'held-item', style: { width: '100%', border: 0, borderBottom: '1px solid var(--line)', borderRadius: 0 }, onClick: function () { addRecv(x); setQ(''); } },
                   h(A.Icon, { name: x.icon }), h('span', { className: 'grow' }, x.name[lang]), h(A.StockBadge, { qty: x.stock, lowAt: x.lowAt, lang: lang, compact: true, unit: x.units[0][lang] }));
-              })) : null),
+              }),
+              h('button', { type: 'button', className: 'held-item', style: { width: '100%', border: 0, borderRadius: 0, color: 'var(--brand)', fontWeight: 600 }, onClick: function () { openNew(q); } },
+                h(A.Icon, { name: 'plus' }), h('span', { className: 'grow' }, fill(tx(results.length ? 'npFromSearch' : 'npNotFound'), { x: q.trim() })))) : null),
           h('div', { className: 'ap-table-wrap', style: { flex: 1, minHeight: 160 } },
             recv.lines.length === 0 ? h('div', { className: 'empty' }, h(A.Icon, { name: 'scan', size: 40, stroke: 1.5 }), tx('recvEmpty')) :
               h('table', { className: 'ap-table ap-table-dense' },
@@ -2421,7 +2454,24 @@ window.FIREBASE_CONFIG = {
         h('div', { role: 'tablist', className: 'tabs' }, tabs.map(function (t) {
           return h('button', { key: t[0], type: 'button', role: 'tab', className: 'tab', 'aria-selected': tab === t[0], onClick: function () { setTab(t[0]); } }, t[1], t[0] === 'low' && low.length ? h('span', { className: 'ap-badge ap-badge-warn' }, low.length) : null);
         }))),
-      body);
+      body,
+      np ? h('div', { className: 'ap-scrim' }, h('form', { className: 'ap-dialog', role: 'dialog', 'aria-modal': true, 'aria-label': tx('npTitle'), style: { width: 600 }, onSubmit: function (e) { e.preventDefault(); saveNew(); } },
+        h('div', { className: 'ap-dialog-head' }, h('span', { className: 'ap-dialog-ico' }, h(A.Icon, { name: 'box' })),
+          h('div', null, h('h2', null, tx('npTitle')), h('div', { className: 'ap-cap' }, tx('npHint')))),
+        h('div', { className: 'f-grid' },
+          h(Field, { id: 'np-th', label: tx('nameTh'), value: np.nameTh, onChange: npSet('nameTh'), full: true, input: { autoFocus: !np.nameTh, 'aria-invalid': !!npErr && !np.nameTh.trim() } }),
+          h(Field, { id: 'np-en', label: tx('nameEn') + ' (' + tx('cbOptional') + ')', value: np.nameEn, onChange: npSet('nameEn'), full: true }),
+          h(Field, { id: 'np-bc', label: tx('barcode'), value: np.barcode, onChange: npSet('barcode'), input: { className: 'f-input mono', inputMode: 'numeric', placeholder: tx('cbIfAny') } }),
+          h(Field, { id: 'np-cat', label: tx('cCat') }, h('select', { id: 'np-cat', className: 'f-input', value: np.cat, onChange: function (e) { npSet('cat')(e.target.value); } }, db.cats.map(function (c) { return h('option', { key: c.id, value: c.id }, c[lang]); }))),
+          h(Field, { id: 'np-ut', label: tx('unitTh'), value: np.unitTh, onChange: npSet('unitTh') }),
+          h(Field, { id: 'np-low', label: tx('lowAt'), value: np.lowAt, onChange: npSet('lowAt'), input: { className: 'f-input ap-num', inputMode: 'numeric' } }),
+          h(Field, { id: 'np-cost', label: tx('costUnit'), value: np.cost, onChange: npSet('cost'), input: { className: 'f-input ap-num', inputMode: 'decimal', placeholder: '0.00' } }),
+          h(Field, { id: 'np-price', label: tx('priceUnit'), value: np.price, onChange: npSet('price'), input: { className: 'f-input ap-num', inputMode: 'decimal', placeholder: '0.00', autoFocus: !!np.nameTh, style: { fontWeight: 700 }, 'aria-invalid': !!npErr && !(num(np.price) > 0) } }),
+          h(Field, { id: 'np-qty', label: tx('npQty'), value: np.qty, onChange: npSet('qty'), full: true, input: { className: 'f-input f-big ap-num', inputMode: 'numeric' } })),
+        npErr ? h('div', { className: 'f-err', role: 'alert' }, npErr) : null,
+        h('div', { className: 'ap-dialog-actions' },
+          h(A.Button, { variant: 'secondary', size: 'lg', onClick: function () { setNp(null); } }, A.t('cancel', lang)),
+          h(A.Button, { type: 'submit', variant: 'primary', size: 'lg', icon: 'plus' }, tx('npSave'))))) : null);
   }
 
   /* ======================================================================
@@ -2688,6 +2738,9 @@ window.FIREBASE_CONFIG = {
           h('div', { className: 'grow', style: { display: 'flex', flexDirection: 'column' } }, h('span', { className: 'ct' }, tx('printerName')), h('span', { className: 'ap-cap', style: { color: 'var(--ink)' } }, tx('printerHint'))),
           h(A.Button, { variant: 'secondary', icon: 'printer', onClick: function () { p.print(sample); } }, tx('testPrint'))),
         row(tx('paper'), tx('paperHint'), h(Seg, { style: { width: 240 }, value: s.paper, onChange: function (v) { setS('paper', v); }, options: [[58, '58 mm'], [80, '80 mm']] })),
+        s.paper === 80 ? row(tx('w80'), tx('w80Hint'), h('div', { className: 'row-c', style: { gap: 8 } },
+          h(A.QtyStepper, { value: num(s.printWidth80) || 72, min: 60, max: 80, label: tx('w80'), onChange: function (v) { setS('printWidth80', v); } }),
+          h('span', { className: 'muted' }, 'มม.'))) : null,
         row(tx('rlang'), tx('rlangHint'), h(Seg, { style: { width: 280 }, value: s.receiptLang, onChange: function (v) { setS('receiptLang', v); }, options: [['th', 'ไทย'], ['en', 'English']] })),
         row(tx('autoPrint'), tx('autoPrintHint'), h(Switch, { value: s.autoPrint, label: tx('autoPrint'), onChange: function (v) { setS('autoPrint', v); } })),
         row(tx('showLogo'), null, h(Switch, { value: s.showLogo, label: tx('showLogo'), onChange: function (v) { setS('showLogo', v); } })),
@@ -3175,7 +3228,10 @@ window.FIREBASE_CONFIG = {
 
     var printEl = null;
     if (printJob) {
-      var content = printJob.kind === 'bill' ? h(ReceiptOf, { bill: printJob.bill, db: db })
+      // 80 mm paper only prints about 72 mm wide, so the receipt is laid out to the printable width
+      var w80 = Math.max(60, Math.min(80, num(db.settings.printWidth80) || 72));
+      var rcptCss = h('style', null, '@media print { #print-root .ap-receipt-80 { width: ' + w80 + 'mm; box-sizing: border-box; padding: 3mm 2mm 4mm; } }');
+      var content = printJob.kind === 'bill' ? h(Frag, null, rcptCss, h(ReceiptOf, { bill: printJob.bill, db: db }))
         : printJob.kind === 'a5' ? h(Frag, null, h('style', null, printJob.data.format === 'a5' ? '@page { size: A5 portrait; margin: 0; }' : '@page { size: A4 landscape; margin: 0; }'), h(CashBillSheets, printJob.data))
         : h(CloseSummary, { rec: printJob.rec, db: db, lang: db.settings.receiptLang });
       printEl = ReactDOM.createPortal(h('div', { key: printJob.id }, content), document.getElementById('print-root'));
