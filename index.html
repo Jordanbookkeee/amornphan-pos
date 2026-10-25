@@ -420,6 +420,54 @@ a { color: var(--brand); }
 @keyframes slide { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 .offline-bar { flex: none; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-1) var(--space-4); background: var(--brand-soft); color: var(--ink); font-size: 14px; font-weight: 600; }
 
+/* cash bill A5: entry screen */
+.cb-form { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; }
+.cb-shopbar { display: flex; align-items: center; gap: var(--space-3); padding: 10px 12px 10px 16px; border-radius: 12px; background: var(--surface-sunken); border: 1px solid var(--line); }
+.cb-grid { display: grid; gap: 10px; }
+.cb-items { flex: 1; min-height: 160px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; }
+.cb-rows { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.cb-row { display: grid; grid-template-columns: 72px 84px minmax(0, 1fr) 104px 104px 48px; gap: 8px; align-items: center; }
+.cb-row .f-input { height: 44px; }
+.cb-row .r { text-align: right; }
+.cb-row-head { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--ink-muted); padding: 0 4px; }
+.cb-amt { text-align: right; font-weight: 700; font-size: 16px; padding-right: 4px; }
+.cb-total-bar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: 10px 12px 10px 20px; border-radius: var(--radius-lg); background: var(--accent-soft); border: 1px solid var(--accent-edge); }
+.cb-preview { width: 500px; flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--surface-sunken); border: 1px solid var(--line); overflow: auto; }
+.cb-preview-frame { width: 470px; height: 666px; flex: none; box-shadow: var(--shadow-raised); background: #ffffff; overflow: hidden; }
+.cb-preview-scale { width: 559px; height: 794px; transform: scale(0.8408); transform-origin: top left; }
+
+/* cash bill A5: the paper itself — fixed print colours, not theme tokens */
+.cb-paper { width: 559px; height: 794px; box-sizing: border-box; padding: 36px 36px 30px; background: #ffffff; color: #1a2433; font-family: var(--font-sans); display: flex; flex-direction: column; gap: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.cb-head { display: flex; gap: 14px; align-items: stretch; }
+.cb-shop { width: 284px; flex: none; box-sizing: border-box; border: 1.5px solid #1f3a5f; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #1f3a5f; font-size: 12px; line-height: 18px; }
+.cb-shop-name { font-size: 19px; line-height: 26px; font-weight: 700; }
+.cb-title-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.cb-title { text-align: center; color: #1f3a5f; border-bottom: 1.5px solid #1f3a5f; padding-bottom: 2px; }
+.cb-title-th { font-size: 26px; line-height: 32px; font-weight: 700; }
+.cb-title-en { font-size: 12px; line-height: 16px; letter-spacing: .32em; }
+.cb-cust { display: flex; flex-direction: column; gap: 6px; }
+.cb-lb { font-size: 12px; line-height: 16px; color: #1f3a5f; white-space: nowrap; }
+.cb-lb small { font-size: 12px; color: #596372; letter-spacing: .02em; }
+.cb-fl { display: flex; align-items: flex-end; gap: 6px; }
+.cb-val { flex: 1; min-width: 0; border-bottom: 1px dotted #1f3a5f; font-size: 13.5px; line-height: 20px; color: #1a2433; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 20px; }
+.cb-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-variant-numeric: tabular-nums; }
+.cb-table th { border: 1px solid #1f3a5f; color: #1f3a5f; font-weight: 600; font-size: 12px; line-height: 15px; padding: 4px 2px; text-align: center; vertical-align: middle; }
+.cb-table th small { display: block; font-size: 12px; font-weight: 400; color: #596372; }
+.cb-table td { border-left: 1px solid #1f3a5f; border-right: 1px solid #1f3a5f; border-bottom: 1px solid #c9cfdb; height: 26px; padding: 0 6px; font-size: 13.5px; line-height: 18px; color: #1a2433; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cb-table .r { text-align: right; }
+.cb-table .c { text-align: center; }
+.cb-table tr.sum td { border: 1px solid #1f3a5f; height: 34px; font-weight: 600; }
+.cb-table .cb-words { background: #eef1f6; text-align: center; white-space: normal; font-size: 12.5px; line-height: 16px; }
+.cb-table .cb-total-l { color: #1f3a5f; font-size: 12px; line-height: 14px; padding: 0 2px; }
+.cb-table .cb-total { background: #eef1f6; font-size: 15px; font-weight: 700; }
+.cb-foot { margin-top: auto; display: flex; align-items: flex-end; gap: 10px; }
+.cb-thanks { flex: 1; text-align: right; font-size: 12px; line-height: 16px; color: #1f3a5f; }
+@media print { #print-root .cb-paper { width: 148mm; height: 210mm; box-shadow: none; } }
+@media (max-width: 1023px) {
+  .cb-preview { width: auto; }
+  .cb-row { grid-template-columns: 60px 64px minmax(0, 1fr) 84px 88px 48px; }
+}
+
 /* sign-in and loading */
 .gate { align-items: center; justify-content: center; padding: var(--space-4); overflow: auto; }
 .gate-box { width: 420px; max-width: 100%; padding: var(--space-6) var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); box-shadow: var(--shadow-raised); }
@@ -807,7 +855,8 @@ window.FIREBASE_CONFIG = {
             shops/{shop}/products/{id}  one product (stock changes are sent as increments)
             shops/{shop}/bills/{id}     one bill
             shops/{shop}/moves/{id}     one stock movement
-            shops/{shop}/closes/{id}    one close-of-day record */
+            shops/{shop}/closes/{id}    one close-of-day record
+   shops/{shop}/cashbills/{id} one hand-written A5 cash bill */
 (function () {
   var cfg = window.FIREBASE_CONFIG;
   var SHOPS = ['stationery', 'parcel'];
@@ -842,7 +891,7 @@ window.FIREBASE_CONFIG = {
   /* ---------- reading: keep one cache per collection and rebuild the whole db on every change ---------- */
   api.subscribe = function (onData, onStatus, onError) {
     var cache = { config: undefined, shops: {} }, unsubs = [], pending = {};
-    SHOPS.forEach(function (s) { cache.shops[s] = { meta: undefined, products: {}, bills: {}, moves: {}, closes: {} }; });
+    SHOPS.forEach(function (s) { cache.shops[s] = { meta: undefined, products: {}, bills: {}, moves: {}, closes: {}, cashbills: {} }; });
 
     function status(key, snap) {
       pending[key] = snap.metadata.hasPendingWrites;
@@ -864,7 +913,8 @@ window.FIREBASE_CONFIG = {
           prefix: m.prefix || (s === 'parcel' ? 'P' : 'A'), cats: m.cats || [], held: m.held || [],
           nextBill: Math.max(m.nextBill || 1, maxNo + 1), products: products, bills: bills,
           moves: vals(c.moves).sort(function (a, b) { return a.date < b.date ? -1 : 1; }),
-          closes: vals(c.closes).sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+          closes: vals(c.closes).sort(function (a, b) { return a.date < b.date ? -1 : 1; }),
+          cashbills: vals(c.cashbills).sort(function (a, b) { return a.createdAt < b.createdAt ? -1 : 1; })
         };
       });
       onData(out);
@@ -890,6 +940,7 @@ window.FIREBASE_CONFIG = {
       coll('bills-' + s, base.collection('bills').where('date', '>=', since), c.bills);
       coll('moves-' + s, base.collection('moves').orderBy('date', 'desc').limit(400), c.moves);
       coll('closes-' + s, base.collection('closes').orderBy('date', 'desc').limit(120), c.closes);
+      coll('cashbills-' + s, base.collection('cashbills').orderBy('createdAt', 'desc').limit(300), c.cashbills);
     });
     return function () { unsubs.forEach(function (u) { u(); }); };
   };
@@ -938,7 +989,8 @@ window.FIREBASE_CONFIG = {
     });
     Object.keys(pa).forEach(function (id) { if (!pb[id]) w.del(base.collection('products').doc(id)); });
 
-    [['bills', billId], ['moves', function (m) { return m.id; }], ['closes', function (c) { return c.id; }]].forEach(function (spec) {
+    function byId(x) { return x.id; }
+    [['bills', billId], ['moves', byId], ['closes', byId], ['cashbills', byId]].forEach(function (spec) {
       var name = spec[0], key = spec[1];
       var ma = byKey(a && a[name], key), mb = byKey(b[name], key);
       Object.keys(mb).forEach(function (k) { if (!ma[k] || !same(ma[k], mb[k])) w.set(base.collection(name).doc(k), mb[k]); });
@@ -1606,6 +1658,14 @@ window.FIREBASE_CONFIG = {
       checkingLogin: 'กำลังตรวจสอบการเข้าสู่ระบบ…', loadingData: 'กำลังโหลดข้อมูลร้าน…',
       loginTitle: 'เข้าสู่ระบบร้าน', loginHint: 'ใช้อีเมลและรหัสผ่านของร้าน ทุกเครื่องที่เข้าระบบจะเห็นข้อมูลเดียวกัน',
       loginEmail: 'อีเมล', loginPassword: 'รหัสผ่าน', loginBtn: 'เข้าสู่ระบบ', loginBusy: 'กำลังเข้าสู่ระบบ…',
+      cbOpen: 'ออกบิลเงินสด A5', cbTitle: 'ออกบิลเงินสด', cbSub: 'กรอกรายการเอง · พิมพ์บนกระดาษ A5', cbList: 'บิลที่ออกแล้ว ({x})',
+      cbOnce: 'ตั้งค่าครั้งเดียว ใช้กับทุกบิล', cbEditShop: 'แก้ไขข้อมูลร้าน', cbBook: 'เล่มที่', cbNo: 'เลขที่', cbDate: 'วันที่', cbReceiver: 'ผู้รับเงิน',
+      cbCustomer: 'นามลูกค้า', cbCustomerId: 'เลขประจำตัว (13 หลัก)', cbAddress: 'ที่อยู่', cbOptional: 'ไม่ระบุก็ได้', cbIfAny: 'ถ้ามี',
+      cbUnit: 'หน่วย', cbDesc: 'รายการ', cbDescPh: 'พิมพ์ชื่อสินค้า', cbPrice: 'ราคา/หน่วย', cbAmount: 'จำนวนเงิน', cbAddRow: 'เพิ่มรายการ', cbRowHint: '{x} / {y} แถว (พอดีกระดาษ A5 หนึ่งแผ่น)',
+      cbTotal: 'รวมเงิน', cbNoItems: 'ยังไม่มีรายการ', cbClear: 'ล้างบิล', cbSavedBtn: 'บันทึกแล้ว', cbPrint: 'พิมพ์บิล A5', cbPreview: 'ตัวอย่างก่อนพิมพ์ · A5 148 × 210 มม.', cbBlank: 'พิมพ์ฟอร์มเปล่า',
+      cbSaved: 'บันทึกบิลเลขที่ {x} แล้ว', cbPrinted: 'ส่งบิลเลขที่ {x} ไปพิมพ์ A5 แล้ว · เริ่มบิลใหม่เลขที่ {y}', cbShopSaved: 'บันทึกข้อมูลร้านแล้ว · ใช้กับบิลทุกใบตั้งแต่นี้',
+      cbShopTitle: 'ข้อมูลร้านสำหรับหัวบิล', cbShopHint: 'กรอกครั้งเดียว ระบบจะพิมพ์บนบิลเงินสดทุกใบ และซิงก์ไปทุกเครื่อง', cbFax: 'แฟกซ์ (ถ้ามี)', cbTaxId: 'เลขประจำตัวผู้เสียภาษี',
+      cbBookNow: 'เล่มที่ปัจจุบัน', cbNextNo: 'เลขที่บิลถัดไป', cbReceiverDefault: 'ชื่อผู้รับเงิน (ค่าเริ่มต้น)', cbShopSave: 'บันทึกข้อมูลร้าน', cbNoName: 'ไม่ระบุชื่อลูกค้า', cbNone: 'ยังไม่มีบิลเงินสดที่บันทึกไว้',
       loginWrong: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง ลองอีกครั้ง', loginOffline: 'ยังไม่มีอินเทอร์เน็ต ต้องต่อเน็ตครั้งแรกเพื่อเข้าสู่ระบบ'
     },
     en: {
@@ -1672,6 +1732,14 @@ window.FIREBASE_CONFIG = {
       checkingLogin: 'Checking sign-in…', loadingData: 'Loading shop data…',
       loginTitle: 'Sign in to the shop', loginHint: 'Use the shop email and password. Every signed-in device sees the same data.',
       loginEmail: 'Email', loginPassword: 'Password', loginBtn: 'Sign in', loginBusy: 'Signing in…',
+      cbOpen: 'Cash bill A5', cbTitle: 'Cash bill', cbSub: 'Type the items · print on A5 paper', cbList: 'Issued bills ({x})',
+      cbOnce: 'set once, used on every bill', cbEditShop: 'Edit shop details', cbBook: 'Book', cbNo: 'Bill no.', cbDate: 'Date', cbReceiver: 'Received by',
+      cbCustomer: 'Customer', cbCustomerId: 'ID / tax no. (13 digits)', cbAddress: 'Address', cbOptional: 'Optional', cbIfAny: 'If any',
+      cbUnit: 'Unit', cbDesc: 'Item', cbDescPh: 'Type the item name', cbPrice: 'Unit price', cbAmount: 'Amount', cbAddRow: 'Add item', cbRowHint: '{x} / {y} rows (fits one A5 sheet)',
+      cbTotal: 'Total', cbNoItems: 'No items yet', cbClear: 'Clear bill', cbSavedBtn: 'Saved', cbPrint: 'Print A5 bill', cbPreview: 'Print preview · A5 148 × 210 mm', cbBlank: 'Print blank form',
+      cbSaved: 'Saved bill no. {x}', cbPrinted: 'Sent bill no. {x} to print on A5 · new bill no. {y}', cbShopSaved: 'Shop details saved for every bill',
+      cbShopTitle: 'Shop details for the bill header', cbShopHint: 'Fill in once; printed on every cash bill and synced to every device', cbFax: 'Fax (optional)', cbTaxId: 'Tax ID',
+      cbBookNow: 'Current book', cbNextNo: 'Next bill no.', cbReceiverDefault: 'Default receiver name', cbShopSave: 'Save shop details', cbNoName: 'No customer name', cbNone: 'No cash bills saved yet',
       loginWrong: 'Wrong email or password, try again', loginOffline: 'No internet yet; the first sign-in needs a connection'
     }
   };
@@ -2536,6 +2604,7 @@ window.FIREBASE_CONFIG = {
     return h('div', { className: 'page' },
       h('div', { className: 'page-head' },
         h('h1', { className: 'h1 grow' }, tx('bills')),
+        h(A.Button, { variant: 'primary', icon: 'receipt', onClick: p.openCashBill }, tx('cbOpen')),
         h(SearchBox, { value: q, onChange: setQ, placeholder: tx('searchBill'), width: 300 }),
         h(Seg, { style: { width: 360, maxWidth: '100%' }, value: day, onChange: setDay, options: [['today', tx('today')], ['week', tx('week')], ['all', tx('dateAll')]] })),
       h(A.CategoryChips, { items: filters, value: f, onChange: setF }),
@@ -2992,7 +3061,8 @@ window.FIREBASE_CONFIG = {
       if (view === 'products') page = h(ProductsView, common);
       else if (view === 'stock') page = h(StockView, Object.assign({ key: stockInit || 'stock' }, common, { initialTab: stockInit ? 'receive' : null, initialPid: stockInit }));
       else if (view === 'reports') page = h(ReportsView, Object.assign({}, common, { printSummary: printSummary }));
-      else if (view === 'bills') page = h(BillsView, common);
+      else if (view === 'bills') page = h(BillsView, Object.assign({}, common, { openCashBill: function () { setView('cashbill'); } }));
+      else if (view === 'cashbill') page = h(CashBillView, Object.assign({}, common, { printA5: function (data) { setPrintJob({ kind: 'a5', data: data, id: uid() }); }, back: function () { setView('bills'); } }));
       else if (view === 'settings') page = h(SettingsView, Object.assign({}, common, { setLang: setLang, replaceDb: function (d) { setDb(d); setCarts({ stationery: emptyCart(), parcel: emptyCart() }); },
         // keep products and settings, drop every sample sale so both shops start at bill 0001
         startFresh: function () {
@@ -3007,7 +3077,7 @@ window.FIREBASE_CONFIG = {
       else page = h(SellView, Object.assign({}, common, { cart: cart, query: query, setQuery: setQuery, cat: cat, setCat: setCat, selected: selected, setSelected: setSelected, flashKey: flashKey, sheet: sheet, setSheet: setSheet,
         addProduct: addProduct, setQty: setQty, setUnit: setUnit, removeLine: removeLine, clearCart: clearCart, keyLine: keyLine, hold: hold, openRecall: openRecall, openDiscount: openDiscount, openCustom: openCustom, goPay: goPay, simulateScan: simulateScan }));
       main = h(Frag, null,
-        h(A.TopBar, { lang: lang, onLang: setLang, active: view === 'stock' ? 'inventory' : view, onNavigate: navigate, status: statusEl, shop: shop, onShop: switchShop }),
+        h(A.TopBar, { lang: lang, onLang: setLang, active: view === 'stock' ? 'inventory' : view === 'cashbill' ? 'bills' : view, onNavigate: navigate, status: statusEl, shop: shop, onShop: switchShop }),
         page);
     }
 
@@ -3064,7 +3134,9 @@ window.FIREBASE_CONFIG = {
 
     var printEl = null;
     if (printJob) {
-      var content = printJob.kind === 'bill' ? h(ReceiptOf, { bill: printJob.bill, db: db }) : h(CloseSummary, { rec: printJob.rec, db: db, lang: db.settings.receiptLang });
+      var content = printJob.kind === 'bill' ? h(ReceiptOf, { bill: printJob.bill, db: db })
+        : printJob.kind === 'a5' ? h(Frag, null, h('style', null, '@page { size: A5 portrait; margin: 0; }'), h(CashBillPaper, printJob.data))
+        : h(CloseSummary, { rec: printJob.rec, db: db, lang: db.settings.receiptLang });
       printEl = ReactDOM.createPortal(h('div', { key: printJob.id }, content), document.getElementById('print-root'));
     }
 
@@ -3076,6 +3148,203 @@ window.FIREBASE_CONFIG = {
         return h(A.Toast, { key: t.id, message: t.message, tone: t.tone, lang: lang, onAction: t.undo ? function () { t.undo(); dismissToast(t.id); } : false });
       })),
       printEl);
+  }
+
+  /* ======================================================================
+     CASH BILL A5 — written by hand, shop header set once, printed on A5
+     ====================================================================== */
+  var CB_ROWS = 12;
+  var CB_DEFAULT = { name: 'ร้านอมรภัณฑ์', address: '45 หมู่ 5 ต.นาโพธิ์ อ.สวี จ.ชุมพร 86130', tel: '077-583262', fax: '077-531032', taxId: '3100603391005', book: '1', next: '1', receiver: 'อมรรัตน์', setup: false };
+
+  // 1,250.50 → หนึ่งพันสองร้อยห้าสิบบาทห้าสิบสตางค์
+  function bahtText(n) {
+    var num = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'], pos = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];
+    function read(s) {
+      s = s.replace(/^0+/, ''); if (!s) return '';
+      if (s.length > 6) return read(s.slice(0, -6)) + 'ล้าน' + read(s.slice(-6));
+      var out = '', L = s.length;
+      for (var i = 0; i < L; i++) {
+        var d = +s[i], q = L - i - 1;
+        if (d === 0) continue;
+        if (q === 1 && d === 1) out += 'สิบ';
+        else if (q === 1 && d === 2) out += 'ยี่สิบ';
+        else if (q === 0 && d === 1 && L > 1) out += 'เอ็ด';
+        else out += num[d] + pos[q];
+      }
+      return out;
+    }
+    var c = Math.round(n * 100), b = Math.floor(c / 100), st = c % 100;
+    return (b > 0 ? read(String(b)) + 'บาท' : (st ? '' : 'ศูนย์บาท')) + (st ? read(String(st)) + 'สตางค์' : 'ถ้วน');
+  }
+  function thDate(d) { d = d || new Date(); return d.getDate() + ' / ' + (d.getMonth() + 1) + ' / ' + (d.getFullYear() + 543); }
+  function cbShop(s) { s = Object.assign({}, CB_DEFAULT, s || {}); return { name: s.name, address: s.address, contact: 'โทร. ' + s.tel + (s.fax ? '  แฟกซ์ ' + s.fax : ''), taxId: s.taxId }; }
+
+  // the printed page: 148 × 210 mm (559 × 794 px at 96 dpi)
+  function CashBillPaper(p) {
+    var shop = p.shop || {}, bill = p.bill || {}, items = (p.items || []).filter(function (it) { return it && (it.desc || num(it.qty) || num(it.price)); });
+    function money(n) { return Math.floor(n).toLocaleString('en-US'); }
+    function stg(n) { var s = Math.round(n * 100) % 100; return s ? String(s).padStart(2, '0') : '-'; }
+    var rows = items.slice(0, CB_ROWS).map(function (it) {
+      var q = num(it.qty), pr = num(it.price), a = q * pr;
+      return [q ? (q.toLocaleString('en-US') + ' ' + (it.unit || '')).trim() : '', it.desc || '', pr ? (pr % 1 ? pr.toFixed(2) : pr.toLocaleString('en-US')) : '', a ? money(a) : '', a ? stg(a) : ''];
+    });
+    while (rows.length < CB_ROWS) rows.push(['', '', '', '', '']);
+    var total = items.reduce(function (s, it) { return s + num(it.qty) * num(it.price); }, 0);
+    function field(th, en, v, right) { return h('div', { className: 'cb-fl' }, h('span', { className: 'cb-lb' }, th, en ? h('small', null, ' ' + en) : null), h('span', { className: 'cb-val', style: right ? { textAlign: 'right' } : null }, v || '')); }
+    return h('div', { className: 'cb-paper' },
+      h('header', { className: 'cb-head' },
+        h('div', { className: 'cb-shop' },
+          h('div', { className: 'cb-shop-name' }, shop.name),
+          h('div', null, shop.address), h('div', null, shop.contact),
+          shop.taxId ? h('div', { style: { fontWeight: 600 } }, 'เลขผู้เสียภาษี ' + shop.taxId) : null),
+        h('div', { className: 'cb-title-col' },
+          h('div', { className: 'cb-title' }, h('div', { className: 'cb-title-th' }, 'บิลเงินสด'), h('div', { className: 'cb-title-en' }, 'CASH SALES')),
+          field('เล่มที่', 'BOOK NO.', bill.book, true), field('เลขที่', 'BILL NO.', bill.no, true), field('วันที่', 'DATE', bill.date, true))),
+      h('section', { className: 'cb-cust' },
+        field('นามลูกค้า', 'CUSTOMER', bill.customer), field('เลขประจำตัวประชาชน / เลขประจำตัวผู้เสียภาษีอากร', '', bill.customerId), field('ที่อยู่', 'ADDRESS', bill.address)),
+      h('table', { className: 'cb-table' },
+        h('colgroup', null, h('col', { style: { width: 70 } }), h('col'), h('col', { style: { width: 62 } }), h('col', { style: { width: 66 } }), h('col', { style: { width: 32 } })),
+        h('thead', null,
+          h('tr', null, h('th', { rowSpan: 2 }, 'จำนวน', h('small', null, 'QUANTITY')), h('th', { rowSpan: 2 }, 'รายการ', h('small', null, 'DESCRIPTION')), h('th', { rowSpan: 2 }, 'หน่วยละ', h('small', null, 'UNIT PRICE')), h('th', { colSpan: 2 }, 'จำนวนเงิน', h('small', null, 'AMOUNT'))),
+          h('tr', null, h('th', { style: { fontWeight: 400 } }, 'บาท'), h('th', { style: { fontWeight: 400 } }, 'สต.'))),
+        h('tbody', null,
+          rows.map(function (r, i) { return h('tr', { key: i }, h('td', null, r[0]), h('td', null, r[1]), h('td', { className: 'r' }, r[2]), h('td', { className: 'r' }, r[3]), h('td', { className: 'c' }, r[4])); }),
+          h('tr', { className: 'sum' },
+            h('td', { colSpan: 2, className: 'cb-words' }, total ? '(' + bahtText(total) + ')' : ''),
+            h('td', { className: 'c cb-total-l' }, 'รวมเงิน', h('br'), 'TOTAL'),
+            h('td', { className: 'r cb-total' }, total ? money(total) : ''),
+            h('td', { className: 'c cb-total' }, total ? stg(total) : '')))),
+      h('footer', { className: 'cb-foot' },
+        h('span', { className: 'cb-lb' }, 'ผู้รับเงิน', h('small', null, ' RECEIVED BY')),
+        h('span', { className: 'cb-val', style: { textAlign: 'center', flex: '0 0 170px' } }, bill.receiver || ''),
+        h('span', { className: 'cb-thanks' }, 'ขอรับเงินด้วยความขอบคุณ')));
+  }
+
+  function emptyItem() { return { qty: '1', unit: '', desc: '', price: '' }; }
+
+  function CashBillView(p) {
+    var db = p.db, tx = p.tx, s = Object.assign({}, CB_DEFAULT, db.settings.cashbill || {});
+    var _f = useState(function () { return { book: s.book, no: String(s.next).padStart(4, '0'), date: thDate(), receiver: s.receiver, customer: '', customerId: '', address: '', items: [emptyItem()], savedId: null }; }), f = _f[0], setF = _f[1];
+    var _d = useState(s.setup ? null : Object.assign({}, s)), draft = _d[0], setDraft = _d[1];
+    var _l = useState(false), showList = _l[0], setShowList = _l[1];
+    var list = (db.cashbills || []).slice().sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; });
+    function set(k, v) { var o = Object.assign({}, f); o[k] = v; o.savedId = null; setF(o); }
+    function setItem(i, k, v) { var items = f.items.slice(); items[i] = Object.assign({}, items[i]); items[i][k] = v; var o = Object.assign({}, f, { items: items, savedId: null }); setF(o); }
+    var items = f.items.map(function (it) { return { qty: num(it.qty), unit: it.unit, desc: it.desc, price: num(it.price) }; });
+    var total = items.reduce(function (a, it) { return a + it.qty * it.price; }, 0);
+    var shop = cbShop(s);
+    var billData = { book: f.book, no: f.no, date: f.date, customer: f.customer, customerId: f.customerId, address: f.address, receiver: f.receiver };
+    function save() {
+      if (!total) return null;
+      var id = f.savedId || uid();
+      var rec = Object.assign({ id: id, createdAt: new Date().toISOString(), items: items.filter(function (it) { return it.desc || it.qty * it.price; }), total: round2(total) }, billData);
+      p.commit(function (n) {
+        n.cashbills = (n.cashbills || []).filter(function (x) { return x.id !== id; }).concat([rec]);
+        var cb = Object.assign({}, CB_DEFAULT, n.settings.cashbill || {});
+        if (num(f.no) >= num(cb.next)) cb.next = String(num(f.no) + 1);
+        cb.book = f.book; n.settings.cashbill = cb;
+      });
+      setF(Object.assign({}, f, { savedId: id }));
+      return rec;
+    }
+    function nextBill() { return { book: f.book, no: String(num(f.no) + 1).padStart(Math.max(4, f.no.length), '0'), date: thDate(), receiver: s.receiver, customer: '', customerId: '', address: '', items: [emptyItem()], savedId: null }; }
+    function doSave() { if (save()) p.toast(fill(tx('cbSaved'), { x: f.no })); }
+    function doPrint() {
+      if (!save()) return;
+      p.printA5({ shop: shop, bill: billData, items: items });
+      p.toast(fill(tx('cbPrinted'), { x: f.no, y: nextBill().no }));
+      setF(nextBill());
+    }
+    function saveShop() {
+      var d = Object.assign({}, draft, { setup: true, next: String(num(draft.next) || 1) });
+      p.commit(function (n) { n.settings.cashbill = d; });
+      setF(Object.assign({}, f, { book: d.book || f.book, no: String(d.next).padStart(4, '0'), receiver: d.receiver || f.receiver }));
+      setDraft(null); p.toast(tx('cbShopSaved'));
+    }
+    function dset(k) { return function (v) { var o = Object.assign({}, draft); o[k] = v; setDraft(o); }; }
+
+    var form = h('section', { className: 'cb-form' },
+      h('div', { className: 'page-head' },
+        h(A.Button, { variant: 'ghost', icon: 'undo', onClick: p.back }, tx('bills')),
+        h('h1', { className: 'h1' }, tx('cbTitle')),
+        h('span', { className: 'ap-cap grow' }, tx('cbSub')),
+        h(A.Button, { variant: 'secondary', icon: 'receipt', onClick: function () { setShowList(true); } }, fill(tx('cbList'), { x: list.length }))),
+      h('div', { className: 'cb-shopbar' },
+        h('span', { style: { color: 'var(--brand)', display: 'inline-flex' } }, h(A.Icon, { name: 'receipt' })),
+        h('div', { className: 'grow', style: { display: 'flex', flexDirection: 'column' } },
+          h('span', { className: 'clamp1', style: { fontWeight: 600 } }, shop.name + ' · ' + shop.address),
+          h('span', { className: 'ap-cap clamp1' }, shop.contact + ' · เลขผู้เสียภาษี ' + shop.taxId + ' — ' + tx('cbOnce'))),
+        h(A.Button, { variant: 'ghost', icon: 'pencil', onClick: function () { setDraft(Object.assign({}, s)); } }, tx('cbEditShop'))),
+      h('div', { className: 'cb-grid', style: { gridTemplateColumns: '88px 112px 150px minmax(0, 1fr)' } },
+        h(Field, { id: 'cb-book', label: tx('cbBook'), value: f.book, onChange: function (v) { set('book', v); }, input: { className: 'f-input ap-num', inputMode: 'numeric' } }),
+        h(Field, { id: 'cb-no', label: tx('cbNo'), value: f.no, onChange: function (v) { set('no', v.replace(/\D/g, '')); }, input: { className: 'f-input ap-num', inputMode: 'numeric' } }),
+        h(Field, { id: 'cb-date', label: tx('cbDate'), value: f.date, onChange: function (v) { set('date', v); } }),
+        h(Field, { id: 'cb-recv', label: tx('cbReceiver'), value: f.receiver, onChange: function (v) { set('receiver', v); } })),
+      h('div', { className: 'cb-grid', style: { gridTemplateColumns: 'minmax(0, 1.1fr) 190px minmax(0, 1.4fr)' } },
+        h(Field, { id: 'cb-cust', label: tx('cbCustomer'), value: f.customer, onChange: function (v) { set('customer', v); }, input: { placeholder: tx('cbOptional') } }),
+        h(Field, { id: 'cb-id', label: tx('cbCustomerId'), value: f.customerId, onChange: function (v) { set('customerId', v.replace(/[^\d-]/g, '')); }, input: { className: 'f-input mono', inputMode: 'numeric', placeholder: tx('cbIfAny') } }),
+        h(Field, { id: 'cb-addr', label: tx('cbAddress'), value: f.address, onChange: function (v) { set('address', v); }, input: { placeholder: tx('cbOptional') } })),
+      h('div', { className: 'card cb-items' },
+        h('div', { className: 'cb-row cb-row-head' }, h('span', null, tx('qty')), h('span', null, tx('cbUnit')), h('span', null, tx('cbDesc')), h('span', { className: 'r' }, tx('cbPrice')), h('span', { className: 'r' }, tx('cbAmount')), h('span')),
+        h('div', { className: 'cb-rows' }, f.items.map(function (it, i) {
+          var a = num(it.qty) * num(it.price);
+          return h('div', { key: i, className: 'cb-row' },
+            h('input', { className: 'f-input ap-num r', inputMode: 'decimal', 'aria-label': tx('qty') + ' ' + (i + 1), value: it.qty, onChange: function (e) { setItem(i, 'qty', e.target.value.replace(/[^\d.]/g, '')); } }),
+            h('input', { className: 'f-input', 'aria-label': tx('cbUnit') + ' ' + (i + 1), placeholder: 'ชิ้น', value: it.unit, onChange: function (e) { setItem(i, 'unit', e.target.value); } }),
+            h('input', { className: 'f-input', 'aria-label': tx('cbDesc') + ' ' + (i + 1), placeholder: tx('cbDescPh'), value: it.desc, onChange: function (e) { setItem(i, 'desc', e.target.value); } }),
+            h('input', { className: 'f-input ap-num r', inputMode: 'decimal', 'aria-label': tx('cbPrice') + ' ' + (i + 1), value: it.price, onChange: function (e) { setItem(i, 'price', e.target.value.replace(/[^\d.]/g, '')); } }),
+            h('span', { className: 'cb-amt ap-num' }, a ? baht(a) : '–'),
+            h(A.Button, { variant: 'danger-quiet', icon: 'trash', 'aria-label': A.t('remove', p.lang) + ' ' + (i + 1), onClick: function () { var rest = f.items.filter(function (_, j) { return j !== i; }); setF(Object.assign({}, f, { items: rest.length ? rest : [emptyItem()], savedId: null })); } }));
+        })),
+        h('div', { className: 'row-c' },
+          h(A.Button, { variant: 'secondary', icon: 'plus', disabled: f.items.length >= CB_ROWS, onClick: function () { setF(Object.assign({}, f, { items: f.items.concat([emptyItem()]) })); } }, tx('cbAddRow')),
+          h('span', { className: 'ap-cap' }, fill(tx('cbRowHint'), { x: f.items.length, y: CB_ROWS })))),
+      h('div', { className: 'cb-total-bar' },
+        h('div', { className: 'grow', style: { display: 'flex', flexDirection: 'column' } },
+          h('span', { style: { fontSize: 14, fontWeight: 600 } }, tx('cbTotal')),
+          h('span', { className: 'ap-num', style: { fontSize: 32, lineHeight: '40px', fontWeight: 700 } }, baht(total)),
+          h('span', { className: 'ap-cap clamp1', style: { color: 'var(--ink)' } }, total ? '(' + bahtText(total) + ')' : tx('cbNoItems'))),
+        h(A.Button, { variant: 'secondary', size: 'lg', onClick: function () { setF(Object.assign({}, f, { customer: '', customerId: '', address: '', items: [emptyItem()], savedId: null })); } }, tx('cbClear')),
+        h(A.Button, { variant: 'secondary', size: 'lg', icon: 'check', disabled: !total, onClick: doSave }, f.savedId ? tx('cbSavedBtn') : tx('save')),
+        h(A.Button, { variant: 'pay', size: 'lg', icon: 'printer', disabled: !total, onClick: doPrint }, tx('cbPrint'))));
+
+    var preview = h('aside', { className: 'cb-preview' },
+      h('div', { className: 'lr', style: { alignSelf: 'stretch', alignItems: 'baseline' } },
+        h('span', { style: { fontWeight: 600 } }, tx('cbPreview')),
+        h('button', { type: 'button', className: 'ap-btn ap-btn-ghost', style: { minHeight: 32 }, onClick: function () { p.printA5({ shop: shop, bill: {}, items: [] }); } }, tx('cbBlank'))),
+      h('div', { className: 'cb-preview-frame' }, h('div', { className: 'cb-preview-scale' }, h(CashBillPaper, { shop: shop, bill: billData, items: items }))));
+
+    var overlay = null;
+    if (draft) {
+      var taxN = String(draft.taxId || '').replace(/\D/g, '').length;
+      overlay = h('div', { className: 'ap-scrim' }, h('div', { className: 'ap-dialog dialog-wide', role: 'dialog', 'aria-modal': true, 'aria-label': tx('cbShopTitle'), style: { width: 640 } },
+        h('div', { className: 'ap-dialog-head' }, h('span', { className: 'ap-dialog-ico' }, h(A.Icon, { name: 'settings' })),
+          h('div', null, h('h2', null, tx('cbShopTitle')), h('div', { className: 'ap-cap' }, tx('cbShopHint')))),
+        h(Field, { id: 's-name', label: tx('shopName'), value: draft.name, onChange: dset('name') }),
+        h(Field, { id: 's-addr', label: tx('address'), value: draft.address, onChange: dset('address') }),
+        h('div', { className: 'f-grid' },
+          h(Field, { id: 's-tel', label: tx('phone'), value: draft.tel, onChange: dset('tel'), input: { inputMode: 'tel' } }),
+          h(Field, { id: 's-fax', label: tx('cbFax'), value: draft.fax, onChange: dset('fax'), input: { inputMode: 'tel' } })),
+        h('div', { className: 'cb-grid', style: { gridTemplateColumns: 'minmax(0, 1fr) 120px 140px' } },
+          h(Field, { id: 's-tax', label: tx('cbTaxId') + ' (' + taxN + '/13)', value: draft.taxId, onChange: function (v) { dset('taxId')(v.replace(/[^\d-]/g, '')); }, input: { className: 'f-input mono', inputMode: 'numeric', 'aria-invalid': taxN > 0 && taxN !== 13 } }),
+          h(Field, { id: 's-book', label: tx('cbBookNow'), value: draft.book, onChange: dset('book'), input: { className: 'f-input ap-num', inputMode: 'numeric' } }),
+          h(Field, { id: 's-next', label: tx('cbNextNo'), value: draft.next, onChange: function (v) { dset('next')(v.replace(/\D/g, '')); }, input: { className: 'f-input ap-num', inputMode: 'numeric' } })),
+        h(Field, { id: 's-recv', label: tx('cbReceiverDefault'), value: draft.receiver, onChange: dset('receiver') }),
+        h('div', { className: 'ap-dialog-actions' },
+          h(A.Button, { variant: 'secondary', size: 'lg', onClick: function () { setDraft(null); } }, A.t('cancel', p.lang)),
+          h(A.Button, { variant: 'primary', size: 'lg', icon: 'check', disabled: !draft.name, onClick: saveShop }, tx('cbShopSave')))));
+    } else if (showList) {
+      overlay = h(A.Dialog, { title: fill(tx('cbList'), { x: list.length }), icon: 'receipt', actions: [h(A.Button, { key: 'c', variant: 'secondary', size: 'lg', onClick: function () { setShowList(false); } }, tx('close'))] },
+        list.length ? h('div', { className: 'held-list', style: { marginTop: 8 } }, list.map(function (b) {
+          return h('div', { key: b.id, className: 'held-item', style: { cursor: 'default' } },
+            h('span', { className: 'mono', style: { width: 64 } }, b.book + '/' + b.no),
+            h('span', { className: 'grow', style: { display: 'flex', flexDirection: 'column', minWidth: 0 } }, h('span', { className: 'clamp1', style: { fontWeight: 600 } }, b.customer || tx('cbNoName')), h('span', { className: 'ap-cap' }, b.date)),
+            h('b', { className: 'ap-num' }, baht(b.total)),
+            h(A.Button, { variant: 'ghost', icon: 'printer', 'aria-label': tx('reprint'), onClick: function () { p.printA5({ shop: shop, bill: b, items: b.items }); } }));
+        })) : h('div', { className: 'ap-cap', style: { fontSize: 16 } }, tx('cbNone')));
+    }
+
+    return h('div', { className: 'page cb-page' }, h('div', { className: 'split' }, form, preview), overlay);
   }
 
   function LoginView(p) {
