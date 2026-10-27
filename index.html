@@ -3319,7 +3319,7 @@ window.FIREBASE_CONFIG = {
 
   // the printed page: 148 × 210 mm (559 × 794 px at 96 dpi)
   function CashBillPaper(p) {
-    var shop = p.shop || {}, bill = p.bill || {}, items = (p.items || []).filter(function (it) { return it && (it.desc || num(it.qty) || num(it.price)); });
+    var bill = p.bill || {}, items = (p.items || []).filter(function (it) { return it && (it.desc || num(it.qty) || num(it.price)); });
     function money(n) { return Math.floor(n).toLocaleString('en-US'); }
     function stg(n) { var s = Math.round(n * 100) % 100; return s ? String(s).padStart(2, '0') : '-'; }
     var rows = items.slice(0, CB_ROWS).map(function (it) {
@@ -3332,10 +3332,8 @@ window.FIREBASE_CONFIG = {
     return h('div', { className: 'cb-paper' + (p.faint ? ' cb-faint' : '') },
       p.copy ? h('div', { className: 'cb-copy' }, p.copy) : null,
       h('header', { className: 'cb-head' },
-        h('div', { className: 'cb-shop' },
-          h('div', { className: 'cb-shop-name' }, shop.name),
-          h('div', null, shop.address), h('div', null, shop.contact),
-          shop.taxId ? h('div', { style: { fontWeight: 600 } }, 'เลขผู้เสียภาษี ' + shop.taxId) : null),
+        // left blank on purpose: the shop stamps its own name and address here
+        h('div', { className: 'cb-shop' }),
         h('div', { className: 'cb-title-col' },
           h('div', { className: 'cb-title' }, h('div', { className: 'cb-title-th' }, 'บิลเงินสด'), h('div', { className: 'cb-title-en' }, 'CASH SALES')),
           field('เล่มที่', 'BOOK NO.', bill.book, true), field('เลขที่', 'BILL NO.', bill.no, true), field('วันที่', 'DATE', bill.date, true))),
