@@ -1702,7 +1702,7 @@ window.FIREBASE_CONFIG = {
       cbPrintedPair: 'ส่งบิลเลขที่ {x} และ {y} ไปพิมพ์บน A4 แผ่นเดียวแล้ว', cbWaiting: 'บันทึกบิลเลขที่ {x} แล้ว · รอพิมพ์คู่กับบิลถัดไปบน A4 แผ่นเดียว',
       cbPendingNote: 'บิลเลขที่ {x} รอพิมพ์คู่กับบิลถัดไป', cbPrintNow: 'พิมพ์เลย',
       cbA4Hint: 'ตั้งหน้าต่างพิมพ์เป็น A4 แนวนอน แล้วตัดตามเส้นประตรงกลาง', cbA5Hint: 'ตั้งหน้าต่างพิมพ์เป็นกระดาษ A5',
-      cbEdit: 'แก้ไขบิล', cbEditing: 'กำลังแก้ไขบิลเก่า {x} · กดบันทึกหรือพิมพ์เพื่อเก็บการแก้ไข', cbEditDone: 'เลิกแก้ไข · บิลใหม่', cbUpdated: 'บันทึกการแก้ไขบิลเลขที่ {x} แล้ว',
+      cbEdit: 'แก้ไขบิล', cbEditing: 'กำลังแก้ไขบิลเก่า {x} · กดบันทึกหรือพิมพ์เพื่อเก็บการแก้ไข', cbEditDone: 'เลิกแก้ไข · บิลใหม่', cbUpdated: 'บันทึกการแก้ไขบิลเลขที่ {x} แล้ว', cbReplace: 'แทนที่บิลเดิม {r} ใบ · ใบใหม่ {n} ใบ',
       cbShopOnBill: 'ข้อมูลร้านบนบิล', cbShopStamp: 'เว้นว่างไว้ปั๊ม', cbShopPrint: 'พิมพ์ชื่อร้าน',
       cbPickHint: 'ติ๊กเลือกบิลเพื่อพิมพ์', cbDelete: 'ลบบิล', cbDeletePicked: 'ลบที่เลือก ({x})', cbDeleteQ: 'ลบบิลเงินสด {x}?', cbDeleteManyQ: 'ลบบิลเงินสด {x} ใบ?',
       cbDeleteBody: 'บิล {x} จะหายจากรายการทุกเครื่อง กู้คืนไม่ได้ (เลขที่บิลถัดไปไม่เปลี่ยน)', cbDeleted: 'ลบบิล {x} แล้ว',
@@ -1795,7 +1795,7 @@ window.FIREBASE_CONFIG = {
       cbPrintedPair: 'Sent bills {x} and {y} to print on one A4 sheet', cbWaiting: 'Saved bill {x} · it prints with the next bill on one A4 sheet',
       cbPendingNote: 'Bill {x} is waiting to print with the next bill', cbPrintNow: 'Print now',
       cbA4Hint: 'Set the print window to A4 landscape, then cut along the dashed line', cbA5Hint: 'Set the print window to A5 paper',
-      cbEdit: 'Edit bill', cbEditing: 'Editing old bill {x} · save or print to keep the changes', cbEditDone: 'Stop editing · new bill', cbUpdated: 'Saved changes to bill no. {x}',
+      cbEdit: 'Edit bill', cbEditing: 'Editing old bill {x} · save or print to keep the changes', cbEditDone: 'Stop editing · new bill', cbUpdated: 'Saved changes to bill no. {x}', cbReplace: 'Replaces {r} issued · {n} new',
       cbShopOnBill: 'Shop details on bill', cbShopStamp: 'Blank for stamp', cbShopPrint: 'Print shop name',
       cbPickHint: 'Tick bills to print', cbDelete: 'Delete bill', cbDeletePicked: 'Delete selected ({x})', cbDeleteQ: 'Delete cash bill {x}?', cbDeleteManyQ: 'Delete {x} cash bills?',
       cbDeleteBody: 'Bill {x} is removed from every device and cannot be restored (the next bill number stays the same).', cbDeleted: 'Deleted bill {x}',
@@ -3411,9 +3411,13 @@ window.FIREBASE_CONFIG = {
     var paper = s.paper === 'a5' ? 'a5' : 'a4';
     // how many bills to print from this form: each gets the next bill number (0001, 0002 … 0030);
     // A4 holds two of them side by side
-    var copies = f.editId ? 1 : Math.max(1, Math.min(200, num(s.copies) || 1));
+    var copies = Math.max(1, Math.min(200, num(s.copies) || 1));
     var sheets = paper === 'a4' ? Math.ceil(copies / 2) : copies;
     function noAt(i) { return String(num(f.no) + i).padStart(Math.max(4, f.no.length), '0'); }
+    // a number already issued in this book is replaced, never duplicated (e.g. reprinting an edited run 0001–0030)
+    function issued(i) { var no = noAt(i); return list.filter(function (b) { return b.book === f.book && b.no === no; })[0]; }
+    var replaced = 0;
+    for (var ri = 0; ri < copies; ri++) if ((ri === 0 && f.editId) || issued(ri)) replaced++;
     function nextBill(step) { return { book: f.book, no: noAt(step || 1), date: thDate(), receiver: s.receiver, customer: '', address: '', items: [emptyItem()], savedId: null }; }
     function doSave() { if (save()) p.toast(fill(tx(f.editId ? 'cbUpdated' : 'cbSaved'), { x: f.no })); }
     function openBill(b) {
@@ -3430,10 +3434,11 @@ window.FIREBASE_CONFIG = {
       var kept = items.filter(function (it) { return it.desc || it.qty * it.price; }), now = new Date().toISOString();
       var recs = [];
       for (var i = 0; i < copies; i++) {
-        var keepId = i === 0 && (f.savedId || f.editId);
-        recs.push(Object.assign({}, billData, { id: keepId || uid(), no: noAt(i), createdAt: (i === 0 && f.createdAt) || now, items: kept, total: round2(total) }));
+        var keepId = i === 0 && (f.savedId || f.editId), old = issued(i);
+        recs.push(Object.assign({}, billData, { id: keepId || (old && old.id) || uid(), no: noAt(i), createdAt: (i === 0 && f.createdAt) || (old && old.createdAt) || now, items: kept, total: round2(total) }));
       }
-      var ids = recs.map(function (r) { return r.id; }), last = num(f.no) + copies - 1;
+      var dupIds = recs.map(function (r, j) { var o = issued(j); return o && o.id !== r.id ? o.id : null; }).filter(Boolean);
+      var ids = recs.map(function (r) { return r.id; }).concat(dupIds), last = num(f.no) + copies - 1;
       p.commit(function (n) {
         n.cashbills = (n.cashbills || []).filter(function (x) { return ids.indexOf(x.id) < 0; }).concat(recs);
         var cb = Object.assign({}, CB_DEFAULT, n.settings.cashbill || {});
@@ -3443,7 +3448,7 @@ window.FIREBASE_CONFIG = {
       print(recs.map(function (r) { return { shop: paperShop, bill: r, items: kept }; }));
       // after reprinting an edited old bill the form goes back to the next unused number
       var after = f.editId ? String(Math.max(num(s.next), last + 1)) : null;
-      p.toast(copies > 1 ? fill(tx('cbPrintedRange'), { x: noAt(0), z: noAt(copies - 1), c: copies, s: sheets, y: noAt(copies) }) : fill(tx('cbPrinted'), { x: f.no, y: after ? after.padStart(4, '0') : noAt(1) }));
+      p.toast(copies > 1 ? fill(tx('cbPrintedRange'), { x: noAt(0), z: noAt(copies - 1), c: copies, s: sheets, y: after ? after.padStart(4, '0') : noAt(copies) }) : fill(tx('cbPrinted'), { x: f.no, y: after ? after.padStart(4, '0') : noAt(1) }));
       setF(after ? freshBill(after) : nextBill(copies));
     }
     // deleting a printed bill cannot be undone, so it asks first and needs the owner PIN
@@ -3536,13 +3541,14 @@ window.FIREBASE_CONFIG = {
       h(Seg, { label: tx('cbPaper'), style: { alignSelf: 'stretch' }, value: paper, onChange: function (v) { setCb('paper', v); }, options: [['a4', tx('cbPaperA4')], ['a5', tx('cbPaperA5')]] }),
       h(Seg, { label: tx('cbShopOnBill'), style: { alignSelf: 'stretch' }, value: s.showShop ? 'print' : 'stamp', onChange: function (v) { setCb('showShop', v === 'print'); }, options: [['stamp', tx('cbShopStamp')], ['print', tx('cbShopPrint')]] }),
       h('div', { className: 'lr', style: { alignSelf: 'stretch', alignItems: 'center', gap: 12 } },
-        h('div', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { className: 'set-t' }, tx('cbCopies')), h('span', { className: 'ap-cap' }, fill(tx(paper === 'a4' ? 'cbSheetsA4' : 'cbSheetsA5'), { s: sheets }))),
+        h('div', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { className: 'set-t' }, tx('cbCopies')), h('span', { className: 'ap-cap' }, fill(tx(paper === 'a4' ? 'cbSheetsA4' : 'cbSheetsA5'), { s: sheets })),
+          replaced ? h('span', { className: 'ap-cap cb-replace', style: { color: 'var(--warn-ink, var(--ink))', fontWeight: 600 } }, fill(tx('cbReplace'), { r: replaced, n: copies - replaced })) : null),
         h('div', { className: 'ap-stepper' },
-          h('button', { type: 'button', className: 'ap-step-btn', 'aria-label': '−1', disabled: copies <= 1 || !!f.editId, onClick: function () { setCb('copies', copies - 1); } }, h(A.Icon, { name: 'minus' })),
-          h('input', { id: 'cb-copies', className: 'cb-copies-in ap-num', inputMode: 'numeric', 'aria-label': tx('cbCopies'), value: String(copies), disabled: !!f.editId,
+          h('button', { type: 'button', className: 'ap-step-btn', 'aria-label': '−1', disabled: copies <= 1, onClick: function () { setCb('copies', copies - 1); } }, h(A.Icon, { name: 'minus' })),
+          h('input', { id: 'cb-copies', className: 'cb-copies-in ap-num', inputMode: 'numeric', 'aria-label': tx('cbCopies'), value: String(copies),
             onChange: function (e) { var v = parseInt(e.target.value.replace(/\D/g, ''), 10); setCb('copies', Math.max(1, Math.min(200, v || 1))); },
             onFocus: function (e) { e.target.select(); } }),
-          h('button', { type: 'button', className: 'ap-step-btn', 'aria-label': '+1', disabled: copies >= 200 || !!f.editId, onClick: function () { setCb('copies', copies + 1); } }, h(A.Icon, { name: 'plus' })))),
+          h('button', { type: 'button', className: 'ap-step-btn', 'aria-label': '+1', disabled: copies >= 200, onClick: function () { setCb('copies', copies + 1); } }, h(A.Icon, { name: 'plus' })))),
       sheet,
       h('span', { className: 'ap-cap' }, paper === 'a4' ? tx('cbA4Hint') : tx('cbA5Hint')));
 
